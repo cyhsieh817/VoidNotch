@@ -102,6 +102,8 @@ Please do not commit secrets (API keys, OAuth tokens, `auth.json`, etc.).
 
 You are free to use, modify, and redistribute under the MIT terms. Attribution via the license notice is appreciated.
 
-## Changelog
+## Versioning & Changelog
 
-See [CHANGELOG.md](CHANGELOG.md).
+- **Current:** see root [`VERSION`](VERSION) (now `0.6.0-dev` until tagged).
+- **Rules:** [`VERSIONING.md`](VERSIONING.md) (SemVer; 0.x pre-stable; 1.0 gates).
+- **History:** [CHANGELOG.md](CHANGELOG.md) (rebaselined from `0.1.0` on 2026-07-09).

@@ -22,8 +22,16 @@ STAMP="$(date +%Y%m%d%H%M%S)"
 
 cd "$REPO_ROOT"
 
-VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
-VERSION="${VERSION:-0.0.0}"
+# 版號：VERSION 檔（權威，見 VERSIONING.md）→ 可達 git tag → 0.0.0
+if [ -f "$REPO_ROOT/VERSION" ]; then
+    VERSION="$(tr -d '[:space:]' < "$REPO_ROOT/VERSION")"
+elif TAG_VER="$(git describe --tags --abbrev=0 2>/dev/null)"; then
+    VERSION="${TAG_VER#v}"
+else
+    VERSION="0.0.0"
+fi
+# Info.plist 行銷版號去掉 -dev 後綴（建置序另用 CFBundleVersion）
+MARKETING_VERSION="${VERSION%-dev}"
 BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 
 echo "==> swift build -c release --product $BIN_NAME"
@@ -51,7 +59,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleName</key>                <string>VoidNotch</string>
     <key>CFBundleDisplayName</key>         <string>VoidNotch</string>
     <key>CFBundlePackageType</key>         <string>APPL</string>
-    <key>CFBundleShortVersionString</key>  <string>$VERSION</string>
+    <key>CFBundleShortVersionString</key>  <string>$MARKETING_VERSION</string>
     <key>CFBundleVersion</key>             <string>$BUILD_NUMBER</string>
     <key>LSMinimumSystemVersion</key>      <string>14.0</string>
     <key>LSUIElement</key>                 <true/>
@@ -65,7 +73,7 @@ echo "==> ad-hoc 簽名（同 Xcode Debug 路線；正式散佈才走 Developer 
 codesign --force --sign - --entitlements "$ENTITLEMENTS" "$APP"
 codesign --verify --verbose=1 "$APP"
 
-echo "==> 完成：${APP} (v${VERSION} build ${BUILD_NUMBER})"
+echo "==> 完成：${APP} (v${MARKETING_VERSION} / VERSION=${VERSION} build ${BUILD_NUMBER})"
 
 case "${1:-}" in
     --install)
