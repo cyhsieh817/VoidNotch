@@ -1,0 +1,500 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		100000000000000000000101 /* VoidNotchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000201 /* VoidNotchApp.swift */; };
+		100000000000000000000102 /* ObservableSystemMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000202 /* ObservableSystemMonitor.swift */; };
+		100000000000000000000103 /* TokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000203 /* TokenStore.swift */; };
+		100000000000000000000104 /* NotchShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000204 /* NotchShell.swift */; };
+		100000000000000000000105 /* NotchWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000205 /* NotchWidget.swift */; };
+		100000000000000000000106 /* WidgetRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000206 /* WidgetRegistry.swift */; };
+		100000000000000000000107 /* SystemWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000207 /* SystemWidget.swift */; };
+		100000000000000000000108 /* TokenWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000208 /* TokenWidget.swift */; };
+		100000000000000000000109 /* WidgetPreviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000209 /* WidgetPreviews.swift */; };
+		100000000000000000000110 /* SystemMonitor in Frameworks */ = {isa = PBXBuildFile; productRef = 100000000000000000000901 /* SystemMonitor */; };
+		100000000000000000000111 /* DynamicNotchKit in Frameworks */ = {isa = PBXBuildFile; productRef = 100000000000000000000902 /* DynamicNotchKit */; };
+		100000000000000000000112 /* CodexBarTokenUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000215 /* CodexBarTokenUsageProvider.swift */; };
+		100000000000000000000113 /* CodexBarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 100000000000000000000906 /* CodexBarCore */; };
+		100000000000000000000114 /* ProviderSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000216 /* ProviderSettingsView.swift */; };
+		100000000000000000000115 /* AgentActivityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000217 /* AgentActivityStore.swift */; };
+		100000000000000000000116 /* AgentActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000218 /* AgentActivityWidget.swift */; };
+		100000000000000000000117 /* VoidNotchKit in Frameworks */ = {isa = PBXBuildFile; productRef = 100000000000000000000907 /* VoidNotchKit */; };
+		100000000000000000000118 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000219 /* Theme.swift */; };
+		100000000000000000000119 /* ProviderAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000220 /* ProviderAppearance.swift */; };
+		100000000000000000000120 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000221 /* L10n.swift */; };
+		100000000000000000000121 /* ProviderComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000222 /* ProviderComponents.swift */; };
+		100000000000000000000122 /* NotchComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000223 /* NotchComponents.swift */; };
+		100000000000000000000123 /* CodexBarTokenAccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000224 /* CodexBarTokenAccountManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		100000000000000000000201 /* VoidNotchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoidNotchApp.swift; sourceTree = "<group>"; };
+		100000000000000000000202 /* ObservableSystemMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObservableSystemMonitor.swift; sourceTree = "<group>"; };
+		100000000000000000000203 /* TokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenStore.swift; sourceTree = "<group>"; };
+		100000000000000000000204 /* NotchShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchShell.swift; sourceTree = "<group>"; };
+		100000000000000000000205 /* NotchWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchWidget.swift; sourceTree = "<group>"; };
+		100000000000000000000206 /* WidgetRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetRegistry.swift; sourceTree = "<group>"; };
+		100000000000000000000207 /* SystemWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWidget.swift; sourceTree = "<group>"; };
+		100000000000000000000208 /* TokenWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenWidget.swift; sourceTree = "<group>"; };
+		100000000000000000000209 /* WidgetPreviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPreviews.swift; sourceTree = "<group>"; };
+		100000000000000000000210 /* VoidNotch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = VoidNotch.entitlements; sourceTree = "<group>"; };
+		100000000000000000000211 /* App README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		100000000000000000000212 /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
+		100000000000000000000213 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		100000000000000000000214 /* VoidNotch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoidNotch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		100000000000000000000215 /* CodexBarTokenUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarTokenUsageProvider.swift; sourceTree = "<group>"; };
+		100000000000000000000216 /* ProviderSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSettingsView.swift; sourceTree = "<group>"; };
+		100000000000000000000217 /* AgentActivityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivityStore.swift; sourceTree = "<group>"; };
+		100000000000000000000218 /* AgentActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivityWidget.swift; sourceTree = "<group>"; };
+		100000000000000000000219 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		100000000000000000000220 /* ProviderAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderAppearance.swift; sourceTree = "<group>"; };
+		100000000000000000000221 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
+		100000000000000000000222 /* ProviderComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderComponents.swift; sourceTree = "<group>"; };
+		100000000000000000000223 /* NotchComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchComponents.swift; sourceTree = "<group>"; };
+		100000000000000000000224 /* CodexBarTokenAccountManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarTokenAccountManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		100000000000000000000301 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000110 /* SystemMonitor in Frameworks */,
+				100000000000000000000111 /* DynamicNotchKit in Frameworks */,
+				100000000000000000000113 /* CodexBarCore in Frameworks */,
+				100000000000000000000117 /* VoidNotchKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		100000000000000000000401 = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000213 /* README.md */,
+				100000000000000000000212 /* Package.swift */,
+				100000000000000000000402 /* App */,
+				100000000000000000000409 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		100000000000000000000402 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000201 /* VoidNotchApp.swift */,
+				100000000000000000000210 /* VoidNotch.entitlements */,
+				100000000000000000000211 /* App README.md */,
+				100000000000000000000403 /* Monitors */,
+				100000000000000000000404 /* Shell */,
+				100000000000000000000405 /* Widgets */,
+				100000000000000000000410 /* Components */,
+				100000000000000000000408 /* Theme */,
+				100000000000000000000407 /* Settings */,
+				100000000000000000000406 /* Previews */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		100000000000000000000403 /* Monitors */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000202 /* ObservableSystemMonitor.swift */,
+				100000000000000000000203 /* TokenStore.swift */,
+				100000000000000000000217 /* AgentActivityStore.swift */,
+				100000000000000000000215 /* CodexBarTokenUsageProvider.swift */,
+				100000000000000000000224 /* CodexBarTokenAccountManager.swift */,
+			);
+			path = Monitors;
+			sourceTree = "<group>";
+		};
+		100000000000000000000404 /* Shell */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000204 /* NotchShell.swift */,
+			);
+			path = Shell;
+			sourceTree = "<group>";
+		};
+		100000000000000000000405 /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000205 /* NotchWidget.swift */,
+				100000000000000000000206 /* WidgetRegistry.swift */,
+				100000000000000000000207 /* SystemWidget.swift */,
+				100000000000000000000208 /* TokenWidget.swift */,
+				100000000000000000000218 /* AgentActivityWidget.swift */,
+			);
+			path = Widgets;
+			sourceTree = "<group>";
+		};
+		100000000000000000000406 /* Previews */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000209 /* WidgetPreviews.swift */,
+			);
+			path = Previews;
+			sourceTree = "<group>";
+		};
+		100000000000000000000410 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000222 /* ProviderComponents.swift */,
+				100000000000000000000223 /* NotchComponents.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		100000000000000000000408 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000219 /* Theme.swift */,
+				100000000000000000000220 /* ProviderAppearance.swift */,
+				100000000000000000000221 /* L10n.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		100000000000000000000407 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000216 /* ProviderSettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		100000000000000000000409 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000214 /* VoidNotch.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		100000000000000000000501 /* VoidNotch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 100000000000000000000801 /* Build configuration list for PBXNativeTarget "VoidNotch" */;
+			buildPhases = (
+				100000000000000000000601 /* Sources */,
+				100000000000000000000301 /* Frameworks */,
+				100000000000000000000602 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VoidNotch;
+			packageProductDependencies = (
+				100000000000000000000901 /* SystemMonitor */,
+				100000000000000000000902 /* DynamicNotchKit */,
+				100000000000000000000906 /* CodexBarCore */,
+				100000000000000000000907 /* VoidNotchKit */,
+			);
+			productName = VoidNotch;
+			productReference = 100000000000000000000214 /* VoidNotch.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		100000000000000000000701 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2650;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+					100000000000000000000501 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+				};
+			};
+			buildConfigurationList = 100000000000000000000802 /* Build configuration list for PBXProject "VoidNotch" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 100000000000000000000401;
+			packageReferences = (
+				100000000000000000000903 /* XCLocalSwiftPackageReference "." */,
+			);
+			productRefGroup = 100000000000000000000409 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				100000000000000000000501 /* VoidNotch */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		100000000000000000000602 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		100000000000000000000601 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000101 /* VoidNotchApp.swift in Sources */,
+				100000000000000000000102 /* ObservableSystemMonitor.swift in Sources */,
+				100000000000000000000103 /* TokenStore.swift in Sources */,
+				100000000000000000000104 /* NotchShell.swift in Sources */,
+				100000000000000000000105 /* NotchWidget.swift in Sources */,
+				100000000000000000000106 /* WidgetRegistry.swift in Sources */,
+				100000000000000000000107 /* SystemWidget.swift in Sources */,
+				100000000000000000000108 /* TokenWidget.swift in Sources */,
+				100000000000000000000109 /* WidgetPreviews.swift in Sources */,
+				100000000000000000000112 /* CodexBarTokenUsageProvider.swift in Sources */,
+				100000000000000000000114 /* ProviderSettingsView.swift in Sources */,
+				100000000000000000000115 /* AgentActivityStore.swift in Sources */,
+				100000000000000000000116 /* AgentActivityWidget.swift in Sources */,
+				100000000000000000000118 /* Theme.swift in Sources */,
+				100000000000000000000119 /* ProviderAppearance.swift in Sources */,
+				100000000000000000000120 /* L10n.swift in Sources */,
+				100000000000000000000121 /* ProviderComponents.swift in Sources */,
+				100000000000000000000122 /* NotchComponents.swift in Sources */,
+				100000000000000000000123 /* CodexBarTokenAccountManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		100000000000000000000811 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = App/VoidNotch.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = VoidNotch;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 CYHsieh. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.voidnotch.VoidNotch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		100000000000000000000812 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = App/VoidNotch.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = VoidNotch;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 CYHsieh. All rights reserved.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.voidnotch.VoidNotch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		100000000000000000000821 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		100000000000000000000822 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES_AGGRESSIVE;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		100000000000000000000801 /* Build configuration list for PBXNativeTarget "VoidNotch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				100000000000000000000811 /* Debug */,
+				100000000000000000000812 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		100000000000000000000802 /* Build configuration list for PBXProject "VoidNotch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				100000000000000000000821 /* Debug */,
+				100000000000000000000822 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		100000000000000000000903 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ".";
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		100000000000000000000901 /* SystemMonitor */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 100000000000000000000903 /* XCLocalSwiftPackageReference "." */;
+			productName = SystemMonitor;
+		};
+		100000000000000000000902 /* DynamicNotchKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DynamicNotchKit;
+		};
+		100000000000000000000906 /* CodexBarCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CodexBarCore;
+		};
+		100000000000000000000907 /* VoidNotchKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 100000000000000000000903 /* XCLocalSwiftPackageReference "." */;
+			productName = VoidNotchKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 100000000000000000000701 /* Project object */;
+}

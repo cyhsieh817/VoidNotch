@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- 不啟用 app-sandbox：IOHID 私有 API + 任意路徑掃描 ~/.claude 所迫。 -->
+    <!-- 確定不可上 Mac App Store；走 Developer ID + Notarization。 -->
+    <!-- 見 docs/research/distribution-and-entitlements.md。 -->
+
+    <!-- Sparkle 自動更新 / 框架載入需要 -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+
+    <!-- 若 Phase 5 加 Widget extension 共享快照才需要（先註解）：
+    <key>com.apple.security.application-groups</key>
+    <array><string>$(TeamIdentifierPrefix).group.voidnotch</string></array>
+    -->
+
+    <!-- 若啟用 web/OAuth provider（Cursor 等）才需要（純本機 JSONL 不需）：
+    <key>com.apple.security.network.client</key>
+    <true/>
+    -->
+</dict>
+</plist>

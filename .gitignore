@@ -1,0 +1,111 @@
+# =============================================================================
+# VoidNotch — public-repo hygiene
+# Local / private work stays on disk; only product source ships to GitHub.
+# =============================================================================
+
+# ----- macOS -----
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# ----- Xcode / SPM build products -----
+.build/
+build/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+timeline.xctimeline
+playground.xcworkspace
+
+# User-specific Xcode / SwiftPM state (machine & username paths)
+xcuserdata/
+**/xcuserdata/
+.swiftpm/xcode/xcuserdata/
+.swiftpm/config/
+*.xccheckout
+*.xcuserdatad/
+
+# ----- Local agent / IDE scratch -----
+.superpowers/
+.claude/
+.cursor/
+.codex/
+.idea/
+.vscode/
+*.swp
+*~
+
+# Soft-delete staging (workspace policy: mv + _DELETE_ prefix, never rm)
+_DELETE_*/
+**/_DELETE_*/
+
+# ----- Development logs & private docs (not for public GitHub) -----
+ACTIONLOG.md
+docs/
+
+# Personal / private notes that may appear at repo root
+PRIVATE/
+private/
+notes/
+scratch/
+scratchpad.md
+TODO.local.md
+*.local.md
+*.personal.md
+
+# ----- Secrets & credentials (never commit) -----
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+*.mobileprovision
+secrets/
+Secrets/
+**/credentials.json
+**/credentials*.json
+**/auth.json
+**/oauth*.json
+**/*credentials*.plist
+**/*api-key*
+**/*apikey*
+
+# Local machine samples / dumps (hostnames, IPs, emails)
+**/*-redacted.json
+**/*.sample.json
+**/mo-status*.json
+
+# ----- Packaging / distribution local artifacts -----
+*.dmg
+*.pkg
+dist/
+release/
+releases/
+# Built .app bundles (keep sources; ignore packaged output under build/)
+*.app/
+
+# ----- Coverage / test noise -----
+coverage/
+*.gcda
+*.gcno
+*.profdata
+*.profraw
+
+# ----- Logs -----
+*.log
+logs/
