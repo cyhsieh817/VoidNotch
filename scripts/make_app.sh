@@ -46,8 +46,16 @@ if [ -d "$APP" ]; then
 fi
 
 echo "==> 組裝 $APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_PATH" "$APP/Contents/MacOS/$BIN_NAME"
+
+ICON_ICNS="$REPO_ROOT/resources/AppIcon/AppIcon.icns"
+if [ -f "$ICON_ICNS" ]; then
+    cp "$ICON_ICNS" "$APP/Contents/Resources/AppIcon.icns"
+    echo "==> App icon: Resources/AppIcon.icns"
+else
+    echo "警告：找不到 $ICON_ICNS（App 將無自訂圖示）" >&2
+fi
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -59,6 +67,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleName</key>                <string>VoidNotch</string>
     <key>CFBundleDisplayName</key>         <string>VoidNotch</string>
     <key>CFBundlePackageType</key>         <string>APPL</string>
+    <key>CFBundleIconFile</key>            <string>AppIcon</string>
     <key>CFBundleShortVersionString</key>  <string>$MARKETING_VERSION</string>
     <key>CFBundleVersion</key>             <string>$BUILD_NUMBER</string>
     <key>LSMinimumSystemVersion</key>      <string>14.0</string>

@@ -104,6 +104,6 @@ You are free to use, modify, and redistribute under the MIT terms. Attribution v
 
 ## Versioning & Changelog
 
-- **Current:** see root [`VERSION`](VERSION) (now `0.6.0-dev` until tagged).
+- **Current:** see root [`VERSION`](VERSION) (`0.6.0`).
 - **Rules:** [`VERSIONING.md`](VERSIONING.md) (SemVer; 0.x pre-stable; 1.0 gates).
 - **History:** [CHANGELOG.md](CHANGELOG.md) (rebaselined from `0.1.0` on 2026-07-09).
