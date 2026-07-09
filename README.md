@@ -1,86 +1,107 @@
 # VoidNotch
 
-macOS Notch 系統監控 + AI Token 追蹤工具。
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-blue.svg)](#requirements)
+[![Swift](https://img.shields.io/badge/Swift-6-orange.svg)](Package.swift)
 
-將 MacBook 的 Notch 區域變成即時儀表板：CPU / RAM / 溫度 / AI Provider Token 流量。
+**Turn your MacBook notch into a live dashboard** for system health and AI coding-provider usage.
 
-## 目前狀態
+macOS Notch 系統監控 + AI Token 用量 HUD。把瀏海變成可展開的即時儀表板。
 
-> 最後更新：2026-07-09
+---
 
-- Notch compact / expanded dashboard：系統監控（CPU、RAM、Disk、Network、Battery、Health、Processes…）+ AI Token / Agent 用量。
-- 純 CLI 建置與打包（`Package.swift` + `scripts/make_app.sh`），也可開 `VoidNotch.xcodeproj`。
-- UI：**zh-TW / EN** 語言切換；Settings 可調 compact 兩側內容、寬高、system metrics 顯示項目。
-- Token：Codex / Claude / Copilot / Gemini (Agy) / **Grok** 等（via CodexBarCore）；unsupported provider 會明確標示。
-- 已知限制：部分機型 IOHID 溫度可能讀不到（best-effort，顯示 `—`）；GPU util 亦為 best-effort。
+## Features
 
-## 建置與掛載（免開 Xcode）
+| Area | What you get |
+|:--|:--|
+| **System** | CPU, RAM, disk, network, battery, health score, top processes, optional temps / GPU util |
+| **AI usage** | Live / quota-style snapshots via [CodexBarCore](https://github.com/steipete/CodexBar) (Claude, Codex, Copilot, Gemini/Agy, Grok, …) |
+| **Notch UI** | Compact strip + expanded dashboard; click to expand, right-click for settings |
+| **Customization** | Choose widgets per side, compact width/height, which system metrics to show |
+| **Language** | Traditional Chinese & English |
 
-機器需裝完整 Xcode 工具鏈（`xcode-select -p` 指向 Xcode.app；因 DynamicNotchKit 用到 SwiftUI `@Entry` 巨集，CommandLineTools-only 編不過），但**全程不需開 Xcode GUI**：
+Unsupported providers are labeled clearly (not shown as 0% usage).
+
+## Requirements
+
+- macOS 14+ (Sonoma or later)
+- Full **Xcode** app (not Command Line Tools only) — DynamicNotchKit needs SwiftUI `@Entry`
+- Apple Silicon recommended (notch machines); non-notch Macs run but compact UX is secondary
+
+## Install (build from source)
 
 ```bash
-scripts/make_app.sh            # swift build -c release → build/VoidNotch.app（ad-hoc 簽名）
-scripts/make_app.sh --run      # 打包後直接啟動
-scripts/make_app.sh --install  # 打包後掛到 /Applications 並啟動
+git clone https://github.com/cyhsieh817/VoidNotch.git
+cd VoidNotch
+
+# Build → ad-hoc signed VoidNotch.app (no Xcode GUI required)
+./scripts/make_app.sh --run
+
+# Or install into /Applications
+./scripts/make_app.sh --install
 ```
 
-想用 Xcode（Preview / 除錯）時再開 `VoidNotch.xcodeproj`；其依賴已改走本地 `Package.swift`，兩條路徑用同一組 pin。
+Open `VoidNotch.xcodeproj` if you prefer Xcode Previews / debugging. Dependencies resolve from the root `Package.swift` (same pins as CLI).
 
-## 技術棧
+First launch: allow any macOS prompts for local network / accessibility only if you enable features that need them. Token usage reads **local CLI/session data** and (for some providers) browser session cookies — no VoidNotch cloud account.
 
-- Swift / SwiftUI + AppKit
-- macOS 14+（Sonoma）
-- SPM (Swift Package Manager)
+## Usage
 
-## 架構來源
+1. Start the app — it lives in the **menu bar** (no Dock icon by default).
+2. **Compact**: system metrics and/or AI summary on the notch sides (configurable).
+3. **Left-click** the notch area to expand the dashboard.
+4. **Right-click** for Settings (providers, layout, metrics, language).
+5. Menu bar → Refresh Token Usage when quotas look stale.
 
-| 層 | 來源 Repo | 用途 |
-|:---|:---------|:-----|
-| Notch UI 外殼 | [DynamicNotchKit](https://github.com/MrKai77/DynamicNotchKit) | compact 左/右側可各自常開或縮起，並支援 expanded dashboard；需完整 Xcode app target |
-| 系統監控 | [Stats](https://github.com/exelban/stats) | CPU/RAM/Apple Silicon 溫度邏輯參考與移植 |
-| Token 追蹤 | [CodexBar](https://github.com/steipete/CodexBar) | v2 使用 CodexBarCore；app target revision 釘選，adapter 已接線 |
-| 授權不相容參考 | [boring.notch](https://github.com/TheBoredTeam/boring.notch) | GPL-3.0，僅讀架構，不 vendoring |
-
-## 功能規劃
-
-- [x] CPU / RAM / Disk / Network / Battery / Health / Processes
-- [x] 溫度（CPU / GPU / SOC，best-effort）
-- [x] System metrics 可選顯示；compact 兩側內容與長寬可調
-- [x] Widget 顯示控制（System / Token / Agent）
-- [x] AI Provider Token / quota（CodexBarCore adapter）
-- [x] 狀態列開啟 Notch dashboard
-- [x] Compact：左鍵展開、右鍵設定、離開後收回
-
-## 快速驗證
+## Develop & test
 
 ```bash
-swift run vn-selftest
-swift test
-swift run vn-probe 5
+swift run vn-selftest    # smoke tests (no XCTest host required for the harness)
+swift test              # full XCTest suite
+swift run vn-probe 5    # print live samples for 5 seconds
 swift build --product VoidNotch
-xcodebuild -project VoidNotch.xcodeproj -scheme VoidNotch -configuration Debug -destination platform=macOS build
 ```
 
-`vn-selftest` 是自帶斷言 smoke test；`swift test` 是 XCTest 正式單元測試；`vn-probe` 會列印即時 CPU/RAM/溫度供人工對照；`swift build --product VoidNotch` 是免 Xcode 的 App 編譯 gate。
+## Project layout
 
-## 目前檔案分層
+| Path | Role |
+|:--|:--|
+| `Sources/SystemMonitor` | Pure data layer (CPU/RAM/disk/net/battery/…) |
+| `Sources/VoidNotchKit` | UI-free token/agent/layout models |
+| `Sources/CSensors` | Apple Silicon thermal bridge (best-effort) |
+| `App/` | SwiftUI shell (DynamicNotchKit) |
+| `scripts/make_app.sh` | CLI package to `.app` |
+| `Tests/` | Unit tests |
 
-| 位置 | 狀態 | 說明 |
-|:---|:---|:---|
-| `Sources/SystemMonitor` | 已可驗證 | 純資料層，零 SwiftUI，供 CLI 與 App 使用 |
-| `Sources/CSensors` | 已可驗證 | Apple Silicon IOHID 溫度橋接，非 Mac App Store 路線 |
-| `Sources/vn-probe` | 已可驗證 | 即時探針 |
-| `Sources/vn-selftest` | 已可驗證 | CommandLineTools 可跑的自測 |
-| `Tests/SystemMonitorTests` | 已可驗證 | 使用 XCTest，需 Xcode toolchain |
-| `App/` | 已接線 | SwiftUI / DynamicNotchKit app 源碼；SPM executable target 與 `VoidNotch.xcodeproj` 皆可編譯 |
-| `VoidNotch.xcodeproj` | 已可建置 | Xcode 入口（Preview/除錯用）；依賴走本地 `Package.swift` 依賴圖 |
-| `scripts/make_app.sh` | 已可驗證 | 免 Xcode CLI 打包：swift build → .app bundle → ad-hoc 簽名 → 掛載 |
+## Credits
 
-## 文件
+Built with and inspired by:
 
-- `README.md` — 本檔
-- `CHANGELOG.md` — 公開版本紀錄
-- `LICENSE` / `THIRD-PARTY-NOTICES.md` — 授權與第三方聲明
-- `App/README.md` — App target 備註
+| Project | Role |
+|:--|:--|
+| [DynamicNotchKit](https://github.com/MrKai77/DynamicNotchKit) | Notch UI shell |
+| [Stats](https://github.com/exelban/stats) | System monitoring patterns (MIT) |
+| [CodexBar](https://github.com/steipete/CodexBar) | Provider usage / CodexBarCore |
+| [boring.notch](https://github.com/TheBoredTeam/boring.notch) | Architecture reference only (GPL — not vendored) |
 
-內部開發筆記（`docs/`、`ACTIONLOG.md` 等）預設不納入公開 repo（見 `.gitignore`）。
+See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) for license texts.
+
+## Contributing
+
+Issues and pull requests are welcome.
+
+1. Fork and create a branch from `main`
+2. Keep changes focused; run `swift test` and `swift run vn-selftest` before opening a PR
+3. Describe what you changed and how you verified it
+
+Please do not commit secrets (API keys, OAuth tokens, `auth.json`, etc.).
+
+## License
+
+[MIT](LICENSE) © 2026 CYHsieh
+
+You are free to use, modify, and redistribute under the MIT terms. Attribution via the license notice is appreciated.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
