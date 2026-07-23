@@ -148,105 +148,103 @@ struct SystemExpandedView: View {
         let l10n = L10n(rawValue: languageRaw)
         _ = (cpuOn, memOn, diskOn, netOn, batOn, tempOn, healthOn, hostOn, procOn, gpuOn)
 
-        return ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                if SystemMetricPreferences.isEnabled(.health) {
-                    healthHeader(s.health, l10n: l10n)
-                }
+        return VStack(alignment: .leading, spacing: 10) {
+            if SystemMetricPreferences.isEnabled(.health) {
+                healthHeader(s.health, l10n: l10n)
+            }
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    if SystemMetricPreferences.isEnabled(.cpu) {
-                        sectionCard(title: l10n.cpu, icon: "cpu") {
-                            metricRow(l10n.usage, "\(s.cpu.percent)%")
-                            metricRow(l10n.loadAverage, String(format: "%.2f / %.2f / %.2f", s.cpu.load1, s.cpu.load5, s.cpu.load15))
-                            if let p = s.cpu.usagePCores, let e = s.cpu.usageECores {
-                                metricRow("P/E", "\(Int((p * 100).rounded()))% / \(Int((e * 100).rounded()))%")
-                            }
-                        }
-                    }
-                    if SystemMetricPreferences.isEnabled(.memory) {
-                        sectionCard(title: l10n.memory, icon: "memorychip") {
-                            metricRow(l10n.usage, "\(s.ram.percent)%")
-                            metricRow(l10n.used, "\(ByteFormat.gib(s.ram.used)) / \(ByteFormat.gib(s.ram.total))")
-                            metricRow(l10n.pressure, s.ram.pressure.label)
-                            metricRow(l10n.swap, ByteFormat.gib(s.ram.swap.used))
-                        }
-                    }
-                    if SystemMetricPreferences.isEnabled(.disk) {
-                        sectionCard(title: l10n.disk, icon: "internaldrive") {
-                            metricRow(l10n.usage, "\(s.disk.usedPercent)%")
-                            metricRow(l10n.free, ByteFormat.gib(s.disk.freeBytes))
-                            metricRow(l10n.diskRead, NetworkUsage.rateText(s.diskIO.readMBps))
-                            metricRow(l10n.diskWrite, NetworkUsage.rateText(s.diskIO.writeMBps))
-                        }
-                    }
-                    if SystemMetricPreferences.isEnabled(.network) {
-                        sectionCard(title: l10n.network, icon: "network") {
-                            metricRow(l10n.interface, s.network.interface ?? "—")
-                            metricRow(l10n.download, "↓ \(NetworkUsage.rateText(s.network.rxMBps))")
-                            metricRow(l10n.upload, "↑ \(NetworkUsage.rateText(s.network.txMBps))")
-                        }
-                    }
-                    if SystemMetricPreferences.isEnabled(.battery) {
-                        sectionCard(title: l10n.power, icon: "battery.100") {
-                            if s.battery.isPresent {
-                                metricRow(l10n.level, s.battery.percent.map { "\($0)%" } ?? "—")
-                                metricRow(l10n.status, s.battery.statusText)
-                                metricRow(l10n.cycles, s.battery.cycleCount.map(String.init) ?? "—")
-                                metricRow(l10n.health, s.battery.healthLabel ?? "—")
-                            } else {
-                                metricRow(l10n.status, "N/A")
-                            }
-                        }
-                    }
-                    if SystemMetricPreferences.isEnabled(.temperature) || SystemMetricPreferences.isEnabled(.gpu) {
-                        sectionCard(title: l10n.thermalGPU, icon: "thermometer.medium") {
-                            if SystemMetricPreferences.isEnabled(.temperature) {
-                                metricRow(l10n.cpuTemp, s.thermal.cpu.map { "\(Int($0.rounded()))°C" } ?? "—")
-                                metricRow(l10n.gpuTemp, s.thermal.gpu.map { "\(Int($0.rounded()))°C" } ?? "—")
-                            }
-                            if SystemMetricPreferences.isEnabled(.gpu) {
-                                metricRow(l10n.gpu, s.gpu.name ?? "—")
-                                metricRow(l10n.gpuUtil, s.gpu.usagePercent.map { "\(Int($0.rounded()))%" } ?? "—")
-                            }
+            LazyVGrid(columns: [GridItem(.flexible(), alignment: .top), GridItem(.flexible(), alignment: .top)], spacing: 8) {
+                if SystemMetricPreferences.isEnabled(.cpu) {
+                    sectionCard(title: l10n.cpu, icon: "cpu", fillsRowHeight: true) {
+                        metricRow(l10n.usage, "\(s.cpu.percent)%")
+                        metricRow(l10n.loadAverage, String(format: "%.2f / %.2f / %.2f", s.cpu.load1, s.cpu.load5, s.cpu.load15))
+                        if let p = s.cpu.usagePCores, let e = s.cpu.usageECores {
+                            metricRow("P/E", "\(Int((p * 100).rounded()))% / \(Int((e * 100).rounded()))%")
                         }
                     }
                 }
-
-                if SystemMetricPreferences.isEnabled(.host) {
-                    sectionCard(title: l10n.host, icon: "desktopcomputer") {
-                        metricRow(l10n.model, s.host.model ?? "—")
-                        metricRow(l10n.chip, s.host.chip ?? "—")
-                        metricRow(l10n.uptime, s.host.uptimeText)
-                        metricRow(l10n.os, s.host.osVersion ?? "—")
+                if SystemMetricPreferences.isEnabled(.memory) {
+                    sectionCard(title: l10n.memory, icon: "memorychip", fillsRowHeight: true) {
+                        metricRow(l10n.usage, "\(s.ram.percent)%")
+                        metricRow(l10n.used, "\(ByteFormat.gib(s.ram.used)) / \(ByteFormat.gib(s.ram.total))")
+                        metricRow(l10n.pressure, s.ram.pressure.label)
+                        metricRow(l10n.swap, ByteFormat.gib(s.ram.swap.used))
                     }
                 }
-
-                if SystemMetricPreferences.isEnabled(.processes) {
-                    sectionCard(title: l10n.topProcesses, icon: "list.bullet") {
-                        if s.topProcesses.isEmpty {
-                            Text("—")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                if SystemMetricPreferences.isEnabled(.disk) {
+                    sectionCard(title: l10n.disk, icon: "internaldrive", fillsRowHeight: true) {
+                        metricRow(l10n.usage, "\(s.disk.usedPercent)%")
+                        metricRow(l10n.free, ByteFormat.gib(s.disk.freeBytes))
+                        metricRow(l10n.diskRead, NetworkUsage.rateText(s.diskIO.readMBps))
+                        metricRow(l10n.diskWrite, NetworkUsage.rateText(s.diskIO.writeMBps))
+                    }
+                }
+                if SystemMetricPreferences.isEnabled(.network) {
+                    sectionCard(title: l10n.network, icon: "network", fillsRowHeight: true) {
+                        metricRow(l10n.interface, s.network.interface ?? "—")
+                        metricRow(l10n.download, "↓ \(NetworkUsage.rateText(s.network.rxMBps))")
+                        metricRow(l10n.upload, "↑ \(NetworkUsage.rateText(s.network.txMBps))")
+                    }
+                }
+                if SystemMetricPreferences.isEnabled(.battery) {
+                    sectionCard(title: l10n.power, icon: "battery.100", fillsRowHeight: true) {
+                        if s.battery.isPresent {
+                            metricRow(l10n.level, s.battery.percent.map { "\($0)%" } ?? "—")
+                            metricRow(l10n.status, s.battery.statusText)
+                            metricRow(l10n.cycles, s.battery.cycleCount.map(String.init) ?? "—")
+                            metricRow(l10n.health, s.battery.healthLabel ?? "—")
                         } else {
-                            ForEach(s.topProcesses) { proc in
-                                HStack {
-                                    Text(proc.name)
-                                        .lineLimit(1)
-                                    Spacer()
-                                    Text(String(format: "%.1f%%", proc.cpuPercent))
-                                        .monospacedDigit()
-                                        .fontWeight(.semibold)
-                                }
-                                .font(.system(size: 11))
-                            }
+                            metricRow(l10n.status, "N/A")
+                        }
+                    }
+                }
+                if SystemMetricPreferences.isEnabled(.temperature) || SystemMetricPreferences.isEnabled(.gpu) {
+                    sectionCard(title: l10n.thermalGPU, icon: "thermometer.medium", fillsRowHeight: true) {
+                        if SystemMetricPreferences.isEnabled(.temperature) {
+                            metricRow(l10n.cpuTemp, s.thermal.cpu.map { "\(Int($0.rounded()))°C" } ?? "—")
+                            metricRow(l10n.gpuTemp, s.thermal.gpu.map { "\(Int($0.rounded()))°C" } ?? "—")
+                        }
+                        if SystemMetricPreferences.isEnabled(.gpu) {
+                            metricRow(l10n.gpu, s.gpu.name ?? "—")
+                            metricRow(l10n.gpuUtil, s.gpu.usagePercent.map { "\(Int($0.rounded()))%" } ?? "—")
                         }
                     }
                 }
             }
-            .padding(.horizontal, 4)
-            .padding(.bottom, 8)
+
+            if SystemMetricPreferences.isEnabled(.host) {
+                sectionCard(title: l10n.host, icon: "desktopcomputer") {
+                    metricRow(l10n.model, s.host.model ?? "—")
+                    metricRow(l10n.chip, s.host.chip ?? "—")
+                    metricRow(l10n.uptime, s.host.uptimeText)
+                    metricRow(l10n.os, s.host.osVersion ?? "—")
+                }
+            }
+
+            if SystemMetricPreferences.isEnabled(.processes) {
+                sectionCard(title: l10n.topProcesses, icon: "list.bullet") {
+                    if s.topProcesses.isEmpty {
+                        Text("—")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(s.topProcesses) { proc in
+                            HStack {
+                                Text(proc.name)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(String(format: "%.1f%%", proc.cpuPercent))
+                                    .monospacedDigit()
+                                    .fontWeight(.semibold)
+                            }
+                            .font(.system(size: 11))
+                        }
+                    }
+                }
+            }
         }
+        .padding(.horizontal, 4)
+        .padding(.bottom, 8)
         .frame(minWidth: 320, maxWidth: 420)
     }
 
@@ -274,7 +272,12 @@ struct SystemExpandedView: View {
         .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
-    private func sectionCard<Content: View>(title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+    private func sectionCard<Content: View>(
+        title: String,
+        icon: String,
+        fillsRowHeight: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Label(title, systemImage: icon)
                 .font(.system(size: 11, weight: .semibold))
@@ -282,7 +285,10 @@ struct SystemExpandedView: View {
             content()
         }
         .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: fillsRowHeight ? .infinity : nil,
+            alignment: .topLeading)
         .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 

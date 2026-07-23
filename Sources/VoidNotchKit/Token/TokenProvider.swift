@@ -43,6 +43,22 @@ public enum TokenProviderKind: String, CaseIterable, Sendable, Identifiable {
         }
     }
 
+    /// 窄空間（gauge 格、compact 顯示）用的短名，≤7 字元。
+    public var compactDisplayName: String {
+        switch self {
+        case .claude: return "Claude"
+        case .codex: return "Codex"
+        case .openAI: return "OpenAI"
+        case .gemini: return "Gemini"
+        case .antigravity: return "Agy"
+        case .copilot: return "Copilot"
+        case .cursor: return "Cursor"
+        case .grok: return "Grok"
+        case .vertexAI: return "Vertex"
+        case .bedrock: return "Bedrock"
+        }
+    }
+
     public var supportsCostSnapshot: Bool {
         switch self {
         case .claude, .codex, .vertexAI, .bedrock:

@@ -21,15 +21,50 @@
 		100000000000000000000112 /* CodexBarTokenUsageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000215 /* CodexBarTokenUsageProvider.swift */; };
 		100000000000000000000113 /* CodexBarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 100000000000000000000906 /* CodexBarCore */; };
 		100000000000000000000114 /* ProviderSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000216 /* ProviderSettingsView.swift */; };
-		100000000000000000000115 /* AgentActivityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000217 /* AgentActivityStore.swift */; };
 		100000000000000000000116 /* AgentActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000218 /* AgentActivityWidget.swift */; };
 		100000000000000000000117 /* VoidNotchKit in Frameworks */ = {isa = PBXBuildFile; productRef = 100000000000000000000907 /* VoidNotchKit */; };
 		100000000000000000000118 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000219 /* Theme.swift */; };
 		100000000000000000000119 /* ProviderAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000220 /* ProviderAppearance.swift */; };
-		100000000000000000000120 /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000221 /* L10n.swift */; };
 		100000000000000000000121 /* ProviderComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000222 /* ProviderComponents.swift */; };
 		100000000000000000000122 /* NotchComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000223 /* NotchComponents.swift */; };
 		100000000000000000000123 /* CodexBarTokenAccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000224 /* CodexBarTokenAccountManager.swift */; };
+		100000000000000000000125 /* DisplayReadings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000226 /* DisplayReadings.swift */; };
+		100000000000000000000126 /* MenubarSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000227 /* MenubarSummaryView.swift */; };
+		100000000000000000000127 /* GaugeContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000228 /* GaugeContentView.swift */; };
+		100000000000000000000128 /* GaugeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000229 /* GaugeController.swift */; };
+		100000000000000000000129 /* GaugePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000230 /* GaugePanel.swift */; };
+		100000000000000000000130 /* GaugeSkin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000231 /* GaugeSkin.swift */; };
+		100000000000000000000140 /* GaugeMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000240 /* GaugeMetrics.swift */; };
+		100000000000000000000141 /* RingsSkin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000241 /* RingsSkin.swift */; };
+		100000000000000000000142 /* GlassSkin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000242 /* GlassSkin.swift */; };
+		100000000000000000000143 /* GaugeSkinPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000243 /* GaugeSkinPreview.swift */; };
+		100000000000000000000131 /* SevenSegmentSkin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000232 /* SevenSegmentSkin.swift */; };
+		100000000000000000000132 /* DisplayItemsEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000233 /* DisplayItemsEditor.swift */; };
+		100000000000000000000133 /* GaugeSettingsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000234 /* GaugeSettingsRow.swift */; };
+		100000000000000000000134 /* HookWiringSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000235 /* HookWiringSettingsView.swift */; };
+		100000000000000000000135 /* MenubarItemsSettingsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000236 /* MenubarItemsSettingsRow.swift */; };
+		100000000000000000000136 /* DisplayTintColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000237 /* DisplayTintColor.swift */; };
+		100000000000000000000137 /* hooks in Resources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000238 /* hooks */; };
+		100000000000000000000138 /* provider-icons in Resources */ = {isa = PBXBuildFile; fileRef = 100000000000000000000239 /* provider-icons */; };
+		100000000000000000001001 /* MenubarModeSettingsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001011 /* MenubarModeSettingsRow.swift */; };
+		100000000000000000001002 /* ProviderAccountSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001012 /* ProviderAccountSection.swift */; };
+		100000000000000000001003 /* ProviderAccountSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001013 /* ProviderAccountSheets.swift */; };
+		100000000000000000001004 /* ProviderAccountRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001014 /* ProviderAccountRow.swift */; };
+		100000000000000000001005 /* NotchLayoutSettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001015 /* NotchLayoutSettingsPanel.swift */; };
+		100000000000000000001006 /* WidgetVisibilitySettingsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001016 /* WidgetVisibilitySettingsRow.swift */; };
+		100000000000000000001007 /* SystemMetricsSettingsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001017 /* SystemMetricsSettingsRow.swift */; };
+		100000000000000000001008 /* ProviderDetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001018 /* ProviderDetailViews.swift */; };
+		100000000000000000001101 /* NotchExpandedPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001201 /* NotchExpandedPanel.swift */; };
+		100000000000000000001102 /* NotchAgentAlertView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001202 /* NotchAgentAlertView.swift */; };
+		100000000000000000001103 /* NotchHookBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001203 /* NotchHookBannerView.swift */; };
+		100000000000000000001104 /* NotchCompactSlotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001204 /* NotchCompactSlotView.swift */; };
+		100000000000000000001105 /* NotchPresentationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001205 /* NotchPresentationState.swift */; };
+		100000000000000000001106 /* ProviderTokenAccountMetadataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001206 /* ProviderTokenAccountMetadataStore.swift */; };
+		100000000000000000001107 /* AntigravityAccountCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001207 /* AntigravityAccountCodec.swift */; };
+		100000000000000000001109 /* AlertSoundSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001209 /* AlertSoundSettingsView.swift */; };
+		100000000000000000001110 /* SettingsMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001211 /* SettingsMetrics.swift */; };
+			100000000000000000001112 /* AgentSpeechSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001212 /* AgentSpeechSettingsView.swift */; };
+			100000000000000000001113 /* AgentOptionSpeechRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001213 /* AgentOptionSpeechRecognizer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,14 +84,49 @@
 		100000000000000000000214 /* VoidNotch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoidNotch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		100000000000000000000215 /* CodexBarTokenUsageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarTokenUsageProvider.swift; sourceTree = "<group>"; };
 		100000000000000000000216 /* ProviderSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSettingsView.swift; sourceTree = "<group>"; };
-		100000000000000000000217 /* AgentActivityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivityStore.swift; sourceTree = "<group>"; };
 		100000000000000000000218 /* AgentActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivityWidget.swift; sourceTree = "<group>"; };
 		100000000000000000000219 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		100000000000000000000220 /* ProviderAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderAppearance.swift; sourceTree = "<group>"; };
-		100000000000000000000221 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		100000000000000000000222 /* ProviderComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderComponents.swift; sourceTree = "<group>"; };
 		100000000000000000000223 /* NotchComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchComponents.swift; sourceTree = "<group>"; };
 		100000000000000000000224 /* CodexBarTokenAccountManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarTokenAccountManager.swift; sourceTree = "<group>"; };
+		100000000000000000000226 /* DisplayReadings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayReadings.swift; sourceTree = "<group>"; };
+		100000000000000000000227 /* MenubarSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenubarSummaryView.swift; sourceTree = "<group>"; };
+		100000000000000000000228 /* GaugeContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeContentView.swift; sourceTree = "<group>"; };
+		100000000000000000000229 /* GaugeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeController.swift; sourceTree = "<group>"; };
+		100000000000000000000230 /* GaugePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugePanel.swift; sourceTree = "<group>"; };
+		100000000000000000000231 /* GaugeSkin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeSkin.swift; sourceTree = "<group>"; };
+		100000000000000000000240 /* GaugeMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeMetrics.swift; sourceTree = "<group>"; };
+		100000000000000000000241 /* RingsSkin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingsSkin.swift; sourceTree = "<group>"; };
+		100000000000000000000242 /* GlassSkin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassSkin.swift; sourceTree = "<group>"; };
+		100000000000000000000243 /* GaugeSkinPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeSkinPreview.swift; sourceTree = "<group>"; };
+		100000000000000000000232 /* SevenSegmentSkin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SevenSegmentSkin.swift; sourceTree = "<group>"; };
+		100000000000000000000233 /* DisplayItemsEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayItemsEditor.swift; sourceTree = "<group>"; };
+		100000000000000000000234 /* GaugeSettingsRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaugeSettingsRow.swift; sourceTree = "<group>"; };
+		100000000000000000000235 /* HookWiringSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookWiringSettingsView.swift; sourceTree = "<group>"; };
+		100000000000000000000236 /* MenubarItemsSettingsRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenubarItemsSettingsRow.swift; sourceTree = "<group>"; };
+		100000000000000000000237 /* DisplayTintColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayTintColor.swift; sourceTree = "<group>"; };
+		100000000000000000000238 /* hooks */ = {isa = PBXFileReference; explicitFileType = folder; path = hooks; sourceTree = "<group>"; };
+		100000000000000000000239 /* provider-icons */ = {isa = PBXFileReference; explicitFileType = folder; path = "provider-icons"; sourceTree = "<group>"; };
+		100000000000000000001011 /* MenubarModeSettingsRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenubarModeSettingsRow.swift; sourceTree = "<group>"; };
+		100000000000000000001012 /* ProviderAccountSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderAccountSection.swift; sourceTree = "<group>"; };
+		100000000000000000001013 /* ProviderAccountSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderAccountSheets.swift; sourceTree = "<group>"; };
+		100000000000000000001014 /* ProviderAccountRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderAccountRow.swift; sourceTree = "<group>"; };
+		100000000000000000001015 /* NotchLayoutSettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchLayoutSettingsPanel.swift; sourceTree = "<group>"; };
+		100000000000000000001016 /* WidgetVisibilitySettingsRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetVisibilitySettingsRow.swift; sourceTree = "<group>"; };
+		100000000000000000001017 /* SystemMetricsSettingsRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemMetricsSettingsRow.swift; sourceTree = "<group>"; };
+		100000000000000000001018 /* ProviderDetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderDetailViews.swift; sourceTree = "<group>"; };
+		100000000000000000001201 /* NotchExpandedPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchExpandedPanel.swift; sourceTree = "<group>"; };
+		100000000000000000001202 /* NotchAgentAlertView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchAgentAlertView.swift; sourceTree = "<group>"; };
+		100000000000000000001203 /* NotchHookBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchHookBannerView.swift; sourceTree = "<group>"; };
+		100000000000000000001204 /* NotchCompactSlotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchCompactSlotView.swift; sourceTree = "<group>"; };
+		100000000000000000001205 /* NotchPresentationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchPresentationState.swift; sourceTree = "<group>"; };
+		100000000000000000001206 /* ProviderTokenAccountMetadataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderTokenAccountMetadataStore.swift; sourceTree = "<group>"; };
+		100000000000000000001207 /* AntigravityAccountCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityAccountCodec.swift; sourceTree = "<group>"; };
+		100000000000000000001209 /* AlertSoundSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertSoundSettingsView.swift; sourceTree = "<group>"; };
+		100000000000000000001211 /* SettingsMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsMetrics.swift; sourceTree = "<group>"; };
+			100000000000000000001212 /* AgentSpeechSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSpeechSettingsView.swift; sourceTree = "<group>"; };
+			100000000000000000001213 /* AgentOptionSpeechRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentOptionSpeechRecognizer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,6 +150,7 @@
 				100000000000000000000213 /* README.md */,
 				100000000000000000000212 /* Package.swift */,
 				100000000000000000000402 /* App */,
+				100000000000000000000412 /* Resources */,
 				100000000000000000000409 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -94,6 +165,7 @@
 				100000000000000000000404 /* Shell */,
 				100000000000000000000405 /* Widgets */,
 				100000000000000000000410 /* Components */,
+				100000000000000000000411 /* Gauge */,
 				100000000000000000000408 /* Theme */,
 				100000000000000000000407 /* Settings */,
 				100000000000000000000406 /* Previews */,
@@ -106,9 +178,9 @@
 			children = (
 				100000000000000000000202 /* ObservableSystemMonitor.swift */,
 				100000000000000000000203 /* TokenStore.swift */,
-				100000000000000000000217 /* AgentActivityStore.swift */,
 				100000000000000000000215 /* CodexBarTokenUsageProvider.swift */,
 				100000000000000000000224 /* CodexBarTokenAccountManager.swift */,
+				100000000000000000001210 /* TokenAccounts */,
 			);
 			path = Monitors;
 			sourceTree = "<group>";
@@ -117,8 +189,23 @@
 			isa = PBXGroup;
 			children = (
 				100000000000000000000204 /* NotchShell.swift */,
+				100000000000000000001201 /* NotchExpandedPanel.swift */,
+				100000000000000000001202 /* NotchAgentAlertView.swift */,
+				100000000000000000001203 /* NotchHookBannerView.swift */,
+					100000000000000000001204 /* NotchCompactSlotView.swift */,
+					100000000000000000001205 /* NotchPresentationState.swift */,
+					100000000000000000001213 /* AgentOptionSpeechRecognizer.swift */,
 			);
 			path = Shell;
+			sourceTree = "<group>";
+		};
+		100000000000000000001210 /* TokenAccounts */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000001206 /* ProviderTokenAccountMetadataStore.swift */,
+				100000000000000000001207 /* AntigravityAccountCodec.swift */,
+			);
+			path = TokenAccounts;
 			sourceTree = "<group>";
 		};
 		100000000000000000000405 /* Widgets */ = {
@@ -146,8 +233,26 @@
 			children = (
 				100000000000000000000222 /* ProviderComponents.swift */,
 				100000000000000000000223 /* NotchComponents.swift */,
+				100000000000000000000226 /* DisplayReadings.swift */,
+				100000000000000000000227 /* MenubarSummaryView.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		100000000000000000000411 /* Gauge */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000228 /* GaugeContentView.swift */,
+				100000000000000000000229 /* GaugeController.swift */,
+				100000000000000000000230 /* GaugePanel.swift */,
+				100000000000000000000231 /* GaugeSkin.swift */,
+				100000000000000000000240 /* GaugeMetrics.swift */,
+				100000000000000000000241 /* RingsSkin.swift */,
+				100000000000000000000242 /* GlassSkin.swift */,
+				100000000000000000000243 /* GaugeSkinPreview.swift */,
+				100000000000000000000232 /* SevenSegmentSkin.swift */,
+			);
+			path = Gauge;
 			sourceTree = "<group>";
 		};
 		100000000000000000000408 /* Theme */ = {
@@ -155,7 +260,7 @@
 			children = (
 				100000000000000000000219 /* Theme.swift */,
 				100000000000000000000220 /* ProviderAppearance.swift */,
-				100000000000000000000221 /* L10n.swift */,
+				100000000000000000000237 /* DisplayTintColor.swift */,
 			);
 			path = Theme;
 			sourceTree = "<group>";
@@ -164,8 +269,71 @@
 			isa = PBXGroup;
 			children = (
 				100000000000000000000216 /* ProviderSettingsView.swift */,
+				100000000000000000001211 /* SettingsMetrics.swift */,
+				100000000000000000001026 /* Alerts */,
+				100000000000000000000233 /* DisplayItemsEditor.swift */,
+				100000000000000000000234 /* GaugeSettingsRow.swift */,
+				100000000000000000000235 /* HookWiringSettingsView.swift */,
+				100000000000000000000236 /* MenubarItemsSettingsRow.swift */,
+				100000000000000000001021 /* Accounts */,
+				100000000000000000001022 /* Layout */,
+				100000000000000000001023 /* System */,
+				100000000000000000001024 /* Rows */,
+				100000000000000000001025 /* Detail */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		100000000000000000001026 /* Alerts */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000001209 /* AlertSoundSettingsView.swift */,
+				100000000000000000001212 /* AgentSpeechSettingsView.swift */,
+			);
+			path = Alerts;
+			sourceTree = "<group>";
+		};
+		100000000000000000001021 /* Accounts */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000001012 /* ProviderAccountSection.swift */,
+				100000000000000000001014 /* ProviderAccountRow.swift */,
+				100000000000000000001013 /* ProviderAccountSheets.swift */,
+			);
+			path = Accounts;
+			sourceTree = "<group>";
+		};
+		100000000000000000001022 /* Layout */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000001015 /* NotchLayoutSettingsPanel.swift */,
+				100000000000000000001016 /* WidgetVisibilitySettingsRow.swift */,
+			);
+			path = Layout;
+			sourceTree = "<group>";
+		};
+		100000000000000000001023 /* System */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000001017 /* SystemMetricsSettingsRow.swift */,
+			);
+			path = System;
+			sourceTree = "<group>";
+		};
+		100000000000000000001024 /* Rows */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000001011 /* MenubarModeSettingsRow.swift */,
+			);
+			path = Rows;
+			sourceTree = "<group>";
+		};
+		100000000000000000001025 /* Detail */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000001018 /* ProviderDetailViews.swift */,
+			);
+			path = Detail;
 			sourceTree = "<group>";
 		};
 		100000000000000000000409 /* Products */ = {
@@ -174,6 +342,15 @@
 				100000000000000000000214 /* VoidNotch.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		100000000000000000000412 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				100000000000000000000238 /* hooks */,
+				100000000000000000000239 /* provider-icons */,
+			);
+			path = resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -243,6 +420,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				100000000000000000000137 /* hooks in Resources */,
+				100000000000000000000138 /* provider-icons in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -264,14 +443,47 @@
 				100000000000000000000109 /* WidgetPreviews.swift in Sources */,
 				100000000000000000000112 /* CodexBarTokenUsageProvider.swift in Sources */,
 				100000000000000000000114 /* ProviderSettingsView.swift in Sources */,
-				100000000000000000000115 /* AgentActivityStore.swift in Sources */,
 				100000000000000000000116 /* AgentActivityWidget.swift in Sources */,
 				100000000000000000000118 /* Theme.swift in Sources */,
 				100000000000000000000119 /* ProviderAppearance.swift in Sources */,
-				100000000000000000000120 /* L10n.swift in Sources */,
 				100000000000000000000121 /* ProviderComponents.swift in Sources */,
 				100000000000000000000122 /* NotchComponents.swift in Sources */,
 				100000000000000000000123 /* CodexBarTokenAccountManager.swift in Sources */,
+				100000000000000000000125 /* DisplayReadings.swift in Sources */,
+				100000000000000000000126 /* MenubarSummaryView.swift in Sources */,
+				100000000000000000000127 /* GaugeContentView.swift in Sources */,
+				100000000000000000000128 /* GaugeController.swift in Sources */,
+				100000000000000000000129 /* GaugePanel.swift in Sources */,
+				100000000000000000000130 /* GaugeSkin.swift in Sources */,
+				100000000000000000000140 /* GaugeMetrics.swift in Sources */,
+				100000000000000000000141 /* RingsSkin.swift in Sources */,
+				100000000000000000000142 /* GlassSkin.swift in Sources */,
+				100000000000000000000143 /* GaugeSkinPreview.swift in Sources */,
+				100000000000000000000131 /* SevenSegmentSkin.swift in Sources */,
+				100000000000000000000132 /* DisplayItemsEditor.swift in Sources */,
+				100000000000000000000133 /* GaugeSettingsRow.swift in Sources */,
+				100000000000000000000134 /* HookWiringSettingsView.swift in Sources */,
+				100000000000000000000135 /* MenubarItemsSettingsRow.swift in Sources */,
+				100000000000000000000136 /* DisplayTintColor.swift in Sources */,
+				100000000000000000001001 /* MenubarModeSettingsRow.swift in Sources */,
+				100000000000000000001002 /* ProviderAccountSection.swift in Sources */,
+				100000000000000000001003 /* ProviderAccountSheets.swift in Sources */,
+				100000000000000000001004 /* ProviderAccountRow.swift in Sources */,
+				100000000000000000001005 /* NotchLayoutSettingsPanel.swift in Sources */,
+				100000000000000000001006 /* WidgetVisibilitySettingsRow.swift in Sources */,
+				100000000000000000001007 /* SystemMetricsSettingsRow.swift in Sources */,
+				100000000000000000001008 /* ProviderDetailViews.swift in Sources */,
+				100000000000000000001101 /* NotchExpandedPanel.swift in Sources */,
+				100000000000000000001102 /* NotchAgentAlertView.swift in Sources */,
+				100000000000000000001103 /* NotchHookBannerView.swift in Sources */,
+				100000000000000000001104 /* NotchCompactSlotView.swift in Sources */,
+				100000000000000000001105 /* NotchPresentationState.swift in Sources */,
+				100000000000000000001106 /* ProviderTokenAccountMetadataStore.swift in Sources */,
+				100000000000000000001107 /* AntigravityAccountCodec.swift in Sources */,
+				100000000000000000001109 /* AlertSoundSettingsView.swift in Sources */,
+				100000000000000000001110 /* SettingsMetrics.swift in Sources */,
+					100000000000000000001112 /* AgentSpeechSettingsView.swift in Sources */,
+					100000000000000000001113 /* AgentOptionSpeechRecognizer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -285,19 +497,21 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 72;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = VoidNotch;
-				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 CYHsieh. All rights reserved.";
+					INFOPLIST_KEY_LSUIElement = YES;
+					INFOPLIST_KEY_NSMicrophoneUsageDescription = "VoidNotch 需要麥克風權限以辨識中文或英文選項。 / VoidNotch needs microphone access to recognize Chinese or English options.";
+					INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 CYHsieh. All rights reserved.";
+					INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "VoidNotch 需要語音辨識權限以將口述選項轉換為既有選項。 / VoidNotch needs speech recognition access to map spoken input to existing options.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.voidnotch.VoidNotch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -313,19 +527,21 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 72;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = VoidNotch;
-				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 CYHsieh. All rights reserved.";
+					INFOPLIST_KEY_LSUIElement = YES;
+					INFOPLIST_KEY_NSMicrophoneUsageDescription = "VoidNotch 需要麥克風權限以辨識中文或英文選項。 / VoidNotch needs microphone access to recognize Chinese or English options.";
+					INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 CYHsieh. All rights reserved.";
+					INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "VoidNotch 需要語音辨識權限以將口述選項轉換為既有選項。 / VoidNotch needs speech recognition access to map spoken input to existing options.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.7.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.voidnotch.VoidNotch;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;

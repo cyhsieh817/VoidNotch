@@ -3,12 +3,15 @@
 //
 
 import Foundation
+import OSLog
 import VoidNotchKit
 
 #if canImport(CodexBarCore)
 import CodexBarCore
 
 public struct CodexBarTokenAccountManager: TokenAccountManaging {
+    private static let log = Logger(subsystem: "dev.voidnotch", category: "account-manager")
+
     private let store: any ProviderTokenAccountStoring
     private let antigravityCredentialsStore: AntigravityOAuthCredentialsStore
     private let metadataStore: ProviderTokenAccountMetadataStore
@@ -74,10 +77,14 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
             do {
                 let usage = try await usageProvider.fetchUsage(for: provider, selectedAccount: tokenAccount)
                 if let skipReason = Self.skipReason(from: usage.errorMessage) {
-                    try? metadataStore.setMetadata(
-                        ProviderTokenAccountMetadata(isDisabled: true, disabledReason: skipReason),
-                        for: tokenAccount.id,
-                        provider: codexProvider)
+                    do {
+                        try metadataStore.setMetadata(
+                            ProviderTokenAccountMetadata(isDisabled: true, disabledReason: skipReason),
+                            for: tokenAccount.id,
+                            provider: codexProvider)
+                    } catch {
+                        Self.log.error("Account disable persistence failed provider=\(codexProvider.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .private)")
+                    }
                     var disabledAccount = account
                     disabledAccount.isDisabled = true
                     disabledAccount.disabledReason = skipReason
@@ -96,10 +103,14 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
                         usage: usage))
             } catch {
                 if let skipReason = Self.skipReason(from: error.localizedDescription) {
-                    try? metadataStore.setMetadata(
-                        ProviderTokenAccountMetadata(isDisabled: true, disabledReason: skipReason),
-                        for: tokenAccount.id,
-                        provider: codexProvider)
+                    do {
+                        try metadataStore.setMetadata(
+                            ProviderTokenAccountMetadata(isDisabled: true, disabledReason: skipReason),
+                            for: tokenAccount.id,
+                            provider: codexProvider)
+                    } catch {
+                        Self.log.error("Account disable persistence failed provider=\(codexProvider.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .private)")
+                    }
                     var disabledAccount = account
                     disabledAccount.isDisabled = true
                     disabledAccount.disabledReason = skipReason
@@ -249,10 +260,97 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
         guard provider == .antigravity else {
             throw TokenAccountManagementError.unsupportedProvider(provider)
         }
+
+        // 主來源＝agy CLI token 檔。僅在該檔「不存在」時才回退舊的 .codexbar 共享憑證；
+        // 檔存在但格式壞或缺 refresh token 一律明確報錯，不靜默改匯入另一個舊帳號。
+        let agyTokenFile: AgyCLITokenFile?
+        do {
+            agyTokenFile = try AgyCLIOAuthBridge.readTokenFile(
+                at: AgyCLIOAuthBridge.defaultTokenFileURL())
+        } catch AgyCLIOAuthBridgeError.fileMissing {
+            agyTokenFile = nil
+        } catch {
+            throw TokenAccountManagementError.noImportableAccount(provider)
+        }
+
+        if let tokenFile = agyTokenFile {
+            guard let refreshToken = Self.normalized(tokenFile.refreshToken) else {
+                throw TokenAccountManagementError.noImportableAccount(provider)
+            }
+            var credentials = AntigravityOAuthCredentials(
+                accessToken: tokenFile.accessToken,
+                refreshToken: refreshToken,
+                expiryDate: tokenFile.expiryDate)
+            let expiryIsUsable = tokenFile.expiryDate == nil
+                || tokenFile.expiryDate! > Date().addingTimeInterval(60)
+            if let accessToken = Self.normalized(tokenFile.accessToken), expiryIsUsable {
+                var request = URLRequest(url: AntigravityOAuthConfig.userInfoURL)
+                request.httpMethod = "GET"
+                request.timeoutInterval = 5
+                request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+                if let (data, response) = try? await URLSession(configuration: .ephemeral).data(for: request),
+                   let httpResponse = response as? HTTPURLResponse,
+                   httpResponse.statusCode == 200,
+                   let json = try? JSONSerialization.jsonObject(with: data),
+                   let payload = json as? [String: Any],
+                   let email = payload["email"] as? String
+                {
+                    credentials.email = email
+                }
+            }
+            return try upsertAntigravityAccount(credentials)
+        }
+
         guard let credentials = try antigravityCredentialsStore.load() else {
             throw TokenAccountManagementError.noImportableAccount(provider)
         }
         return try upsertAntigravityAccount(credentials)
+    }
+
+    public func applyAccountToAgyCLI(_ accountID: UUID, for provider: TokenProviderKind) async throws {
+        guard provider == .antigravity else {
+            throw TokenAccountManagementError.unsupportedProvider(provider)
+        }
+
+        guard let data = try store.loadAccounts()[.antigravity],
+              let account = data.accounts.first(where: { $0.id == accountID })
+        else {
+            throw TokenAccountManagementError.accountNotFound
+        }
+        guard let credentials = AntigravityOAuthCredentialsStore.credentials(fromTokenAccountValue: account.token),
+              let refreshToken = Self.normalized(credentials.refreshToken)
+        else {
+            throw TokenAccountManagementError.accountMissingRefreshToken
+        }
+
+        let tokenFileURL = AgyCLIOAuthBridge.defaultTokenFileURL()
+        let tokenFile: AgyCLITokenFile
+        do {
+            tokenFile = try AgyCLIOAuthBridge.readTokenFile(at: tokenFileURL)
+        } catch AgyCLIOAuthBridgeError.fileMissing {
+            throw TokenAccountManagementError.agyTokenFileMissing
+        } catch {
+            throw error
+        }
+
+        do {
+            // 只交付 refresh token：清空 access token 並把 expiry 設為過期（nil→1970 sentinel），
+            // 強制 agy CLI 下次啟動用它自己內嵌的 client 重新換發，不沿用可能屬於別帳號的舊 access token。
+            try AgyCLIOAuthBridge.applyCredentials(
+                accessToken: nil,
+                refreshToken: refreshToken,
+                expiry: nil,
+                to: tokenFileURL,
+                expectedSHA256: tokenFile.fileSHA256)
+        } catch AgyCLIOAuthBridgeError.conflictDetected {
+            throw TokenAccountManagementError.agyTokenFileConflict
+        } catch AgyCLIOAuthBridgeError.fileMissing {
+            throw TokenAccountManagementError.agyTokenFileMissing
+        } catch {
+            throw error
+        }
+
+        try antigravityCredentialsStore.save(credentials)
     }
 
     public func importAccounts(_ accountImport: ProviderAccountImport, for provider: TokenProviderKind) async throws -> [ProviderAccount] {
@@ -260,7 +358,7 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
             throw TokenAccountManagementError.unsupportedProvider(provider)
         }
 
-        let imports = try Self.parseAntigravityAccountImports(accountImport)
+        let imports = try AntigravityAccountCodec.parseAntigravityAccountImports(accountImport)
         guard !imports.isEmpty else {
             throw TokenAccountManagementError.invalidImportData(provider)
         }
@@ -335,6 +433,31 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
                 label: label,
                 token: token,
                 externalIdentifier: email,
+                lastUsed: Date().timeIntervalSince1970)
+            accountsByProvider[.antigravity] = ProviderTokenAccountData(
+                version: data.version,
+                accounts: accounts,
+                activeIndex: index)
+            try store.storeAccounts(accountsByProvider)
+            try antigravityCredentialsStore.save(credentials)
+            return Self.map(accounts[index], provider: .antigravity, isActive: true)
+        }
+
+        if let refreshToken = Self.normalized(credentials.refreshToken),
+           let index = accounts.firstIndex(where: {
+               guard let existingCredentials = AntigravityOAuthCredentialsStore.credentials(fromTokenAccountValue: $0.token),
+                     let existingRefreshToken = Self.normalized(existingCredentials.refreshToken)
+               else {
+                   return false
+               }
+               return existingRefreshToken == refreshToken
+           })
+        {
+            accounts[index] = Self.copy(
+                accounts[index],
+                label: labelOverride ?? email ?? accounts[index].label,
+                token: token,
+                externalIdentifier: email ?? accounts[index].externalIdentifier,
                 lastUsed: Date().timeIntervalSince1970)
             accountsByProvider[.antigravity] = ProviderTokenAccountData(
                 version: data.version,
@@ -445,7 +568,7 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
             organizationID: account.organizationID)
     }
 
-    private static func normalized(_ value: String?) -> String? {
+    static func normalized(_ value: String?) -> String? {
         let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
         return (trimmed?.isEmpty == false) ? trimmed : nil
     }
@@ -483,314 +606,6 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
         }
         return false
     }
-
-    private static func parseAntigravityAccountImports(
-        _ accountImport: ProviderAccountImport) throws -> [ParsedAntigravityAccountImport]
-    {
-        let rawValue = accountImport.normalizedRawValue
-        guard !rawValue.isEmpty else {
-            throw TokenAccountManagementError.invalidImportData(.antigravity)
-        }
-
-        if let data = rawValue.data(using: .utf8) {
-            let decoder = JSONDecoder()
-            if let wrapper = try? decoder.decode(AntigravityAccountImportWrapper.self, from: data),
-               !wrapper.accounts.isEmpty
-            {
-                let parsed = wrapper.accounts.compactMap(\.parsedAccountImport)
-                guard !parsed.isEmpty else {
-                    throw TokenAccountManagementError.invalidImportData(.antigravity)
-                }
-                return parsed
-            }
-
-            if let items = try? decoder.decode([AntigravityAccountImportItem].self, from: data),
-               !items.isEmpty
-            {
-                let parsed = items.compactMap(\.parsedAccountImport)
-                guard !parsed.isEmpty else {
-                    throw TokenAccountManagementError.invalidImportData(.antigravity)
-                }
-                return parsed
-            }
-
-            if let credentials = try? decoder.decode(AntigravityOAuthCredentials.self, from: data),
-               credentials.hasUsableToken
-            {
-                return [
-                    ParsedAntigravityAccountImport(
-                        credentials: credentials,
-                        label: accountImport.normalizedLabel),
-                ]
-            }
-        }
-
-        guard Self.normalized(rawValue) != nil else {
-            throw TokenAccountManagementError.invalidImportData(.antigravity)
-        }
-        return [
-            ParsedAntigravityAccountImport(
-                credentials: AntigravityOAuthCredentials(
-                    accessToken: nil,
-                    refreshToken: rawValue,
-                    expiryDate: nil),
-                label: accountImport.normalizedLabel),
-        ]
-    }
-}
-
-struct ProviderTokenAccountMetadata: Codable, Sendable, Equatable {
-    var isDisabled: Bool
-    var disabledReason: String?
-}
-
-struct ProviderTokenAccountMetadataStore: @unchecked Sendable {
-    private static let fileLock = NSLock()
-
-    private let fileURL: URL
-    private let fileManager: FileManager
-
-    init(fileURL: URL = Self.defaultURL(), fileManager: FileManager = .default) {
-        self.fileURL = fileURL
-        self.fileManager = fileManager
-    }
-
-    func loadMetadata(for provider: UsageProvider) throws -> [String: ProviderTokenAccountMetadata] {
-        Self.fileLock.lock()
-        defer { Self.fileLock.unlock() }
-        return try loadFileUnlocked().providers[provider.rawValue] ?? [:]
-    }
-
-    func setMetadata(
-        _ metadata: ProviderTokenAccountMetadata?,
-        for accountID: UUID,
-        provider: UsageProvider) throws
-    {
-        Self.fileLock.lock()
-        defer { Self.fileLock.unlock() }
-
-        var file = try loadFileUnlocked()
-        var providerMetadata = file.providers[provider.rawValue] ?? [:]
-        providerMetadata[accountID.uuidString] = metadata
-        if providerMetadata.isEmpty {
-            file.providers.removeValue(forKey: provider.rawValue)
-        } else {
-            file.providers[provider.rawValue] = providerMetadata
-        }
-        try storeFileUnlocked(file)
-    }
-
-    func removeMetadata(for accountID: UUID, provider: UsageProvider) throws {
-        try setMetadata(nil, for: accountID, provider: provider)
-    }
-
-    private func loadFileUnlocked() throws -> ProviderTokenAccountMetadataFile {
-        guard fileManager.fileExists(atPath: fileURL.path) else {
-            return ProviderTokenAccountMetadataFile(version: 1, providers: [:])
-        }
-        let data = try Data(contentsOf: fileURL)
-        return try JSONDecoder().decode(ProviderTokenAccountMetadataFile.self, from: data)
-    }
-
-    private func storeFileUnlocked(_ file: ProviderTokenAccountMetadataFile) throws {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        let data = try encoder.encode(file)
-        let directory = fileURL.deletingLastPathComponent()
-        if !fileManager.fileExists(atPath: directory.path) {
-            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
-        }
-        try data.write(to: fileURL, options: [.atomic])
-        #if os(macOS) || os(Linux)
-        try fileManager.setAttributes([
-            .posixPermissions: NSNumber(value: Int16(0o600)),
-        ], ofItemAtPath: fileURL.path)
-        #endif
-    }
-
-    static func defaultURL() -> URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? FileManager.default.homeDirectoryForCurrentUser
-        return base
-            .appendingPathComponent("VoidNotch", isDirectory: true)
-            .appendingPathComponent("provider-account-metadata.json")
-    }
-}
-
-private struct ProviderTokenAccountMetadataFile: Codable {
-    var version: Int
-    var providers: [String: [String: ProviderTokenAccountMetadata]]
-}
-
-private struct AntigravityAccountsExport: Encodable {
-    var accounts: [AntigravityExportAccount]
-}
-
-private struct AntigravityExportAccount: Encodable {
-    var email: String?
-    var refreshToken: String
-
-    private enum CodingKeys: String, CodingKey {
-        case email
-        case refreshToken = "refresh_token"
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encodeIfPresent(email, forKey: .email)
-        try container.encode(refreshToken, forKey: .refreshToken)
-    }
-}
-
-private struct ParsedAntigravityAccountImport {
-    var credentials: AntigravityOAuthCredentials
-    var label: String?
-}
-
-private struct AntigravityAccountImportWrapper: Decodable {
-    var accounts: [AntigravityAccountImportItem]
-
-    private enum CodingKeys: String, CodingKey {
-        case accounts
-    }
-}
-
-private struct AntigravityAccountImportItem: Decodable {
-    var email: String?
-    var name: String?
-    var customLabel: String?
-    var accessToken: String?
-    var refreshToken: String?
-    var idToken: String?
-    var expiryDateMilliseconds: Double?
-    var token: AntigravityAccountImportToken?
-
-    var parsedAccountImport: ParsedAntigravityAccountImport? {
-        let resolvedAccessToken = Self.normalized(token?.accessToken) ?? Self.normalized(accessToken)
-        let resolvedRefreshToken = Self.normalized(token?.refreshToken) ?? Self.normalized(refreshToken)
-        guard resolvedAccessToken != nil || resolvedRefreshToken != nil else { return nil }
-
-        let resolvedEmail = Self.normalized(email) ?? Self.normalized(token?.email)
-        let expiryDate = Self.expiryDate(fromMilliseconds: token?.expiryDateMilliseconds ?? expiryDateMilliseconds)
-        return ParsedAntigravityAccountImport(
-            credentials: AntigravityOAuthCredentials(
-                accessToken: resolvedAccessToken,
-                refreshToken: resolvedRefreshToken,
-                expiryDate: expiryDate,
-                idToken: Self.normalized(idToken),
-                email: resolvedEmail),
-            label: Self.normalized(customLabel) ?? Self.normalized(name) ?? resolvedEmail)
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.email = try container.decodeIfPresent(String.self, forKey: .email)
-        self.name = try container.decodeIfPresent(String.self, forKey: .name)
-        self.customLabel =
-            try container.decodeIfPresent(String.self, forKey: .customLabelSnake)
-            ?? container.decodeIfPresent(String.self, forKey: .customLabelCamel)
-        self.accessToken =
-            try container.decodeIfPresent(String.self, forKey: .accessTokenSnake)
-            ?? container.decodeIfPresent(String.self, forKey: .accessTokenCamel)
-        self.refreshToken =
-            try container.decodeIfPresent(String.self, forKey: .refreshTokenSnake)
-            ?? container.decodeIfPresent(String.self, forKey: .refreshTokenCamel)
-        self.idToken =
-            try container.decodeIfPresent(String.self, forKey: .idTokenSnake)
-            ?? container.decodeIfPresent(String.self, forKey: .idTokenCamel)
-        self.expiryDateMilliseconds =
-            try container.decodeFlexibleMilliseconds(forKey: .expiryDateSnake)
-            ?? container.decodeFlexibleMilliseconds(forKey: .expiryTimestampSnake)
-            ?? container.decodeFlexibleMilliseconds(forKey: .expiresAtCamel)
-        self.token = try container.decodeIfPresent(AntigravityAccountImportToken.self, forKey: .token)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case email
-        case name
-        case token
-        case customLabelSnake = "custom_label"
-        case customLabelCamel = "customLabel"
-        case accessTokenSnake = "access_token"
-        case accessTokenCamel = "accessToken"
-        case refreshTokenSnake = "refresh_token"
-        case refreshTokenCamel = "refreshToken"
-        case idTokenSnake = "id_token"
-        case idTokenCamel = "idToken"
-        case expiryDateSnake = "expiry_date"
-        case expiryTimestampSnake = "expiry_timestamp"
-        case expiresAtCamel = "expiresAt"
-    }
-
-    private static func normalized(_ value: String?) -> String? {
-        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (trimmed?.isEmpty == false) ? trimmed : nil
-    }
-
-    private static func expiryDate(fromMilliseconds value: Double?) -> Date? {
-        guard let value, value > 0 else { return nil }
-        if value > 10_000_000_000 {
-            return Date(timeIntervalSince1970: value / 1000)
-        }
-        return Date(timeIntervalSince1970: value)
-    }
-}
-
-private struct AntigravityAccountImportToken: Decodable {
-    var email: String?
-    var accessToken: String?
-    var refreshToken: String?
-    var expiryDateMilliseconds: Double?
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.email = try container.decodeIfPresent(String.self, forKey: .email)
-        self.accessToken =
-            try container.decodeIfPresent(String.self, forKey: .accessTokenSnake)
-            ?? container.decodeIfPresent(String.self, forKey: .accessTokenCamel)
-        self.refreshToken =
-            try container.decodeIfPresent(String.self, forKey: .refreshTokenSnake)
-            ?? container.decodeIfPresent(String.self, forKey: .refreshTokenCamel)
-        self.expiryDateMilliseconds =
-            try container.decodeFlexibleMilliseconds(forKey: .expiryDateSnake)
-            ?? container.decodeFlexibleMilliseconds(forKey: .expiryTimestampSnake)
-            ?? container.decodeFlexibleMilliseconds(forKey: .expiresAtCamel)
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case email
-        case accessTokenSnake = "access_token"
-        case accessTokenCamel = "accessToken"
-        case refreshTokenSnake = "refresh_token"
-        case refreshTokenCamel = "refreshToken"
-        case expiryDateSnake = "expiry_date"
-        case expiryTimestampSnake = "expiry_timestamp"
-        case expiresAtCamel = "expiresAt"
-    }
-}
-
-private extension KeyedDecodingContainer {
-    func decodeFlexibleMilliseconds(forKey key: Key) throws -> Double? {
-        if let double = try decodeIfPresent(Double.self, forKey: key) {
-            return double
-        }
-        if let int = try decodeIfPresent(Int.self, forKey: key) {
-            return Double(int)
-        }
-        if let string = try decodeIfPresent(String.self, forKey: key),
-           let double = Double(string.trimmingCharacters(in: .whitespacesAndNewlines))
-        {
-            return double
-        }
-        return nil
-    }
-}
-
-private extension AntigravityOAuthCredentials {
-    var hasUsableToken: Bool {
-        self.accessToken?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-            || self.refreshToken?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-    }
 }
 #else
 public struct CodexBarTokenAccountManager: TokenAccountManaging {
@@ -805,6 +620,10 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
     }
 
     public func deleteAccount(_ accountID: UUID, for provider: TokenProviderKind) async throws {
+        throw TokenAccountManagementError.unsupportedProvider(provider)
+    }
+
+    public func applyAccountToAgyCLI(_ accountID: UUID, for provider: TokenProviderKind) async throws {
         throw TokenAccountManagementError.unsupportedProvider(provider)
     }
 }

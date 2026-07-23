@@ -373,7 +373,8 @@ public struct CodexBarTokenUsageProvider: TokenUsageProviding {
     }
 
     private static func clampedPercent(_ value: Double) -> Int {
-        min(100, max(0, Int(value.rounded())))
+        guard value.isFinite else { return 0 }
+        return min(100, max(0, Int(value.rounded())))
     }
 
     private static func map(_ error: Error, provider: TokenProviderKind) -> ProviderUsage {
@@ -401,13 +402,26 @@ public struct CodexBarTokenUsageProvider: TokenUsageProviding {
         for provider: UsageProvider,
         store: any ProviderTokenAccountStoring) -> ProviderTokenAccount?
     {
-        guard TokenAccountSupportCatalog.support(for: provider) != nil,
-              let data = try? store.loadAccounts()[provider],
-              !data.accounts.isEmpty
-        else {
+        guard TokenAccountSupportCatalog.support(for: provider) != nil else {
             return nil
         }
-        let metadata = (try? ProviderTokenAccountMetadataStore().loadMetadata(for: provider)) ?? [:]
+        let accountsByProvider: [UsageProvider: ProviderTokenAccountData]
+        do {
+            accountsByProvider = try store.loadAccounts()
+        } catch {
+            Self.log.error("Account data load failed provider=\(provider.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .private)")
+            return nil
+        }
+        guard let data = accountsByProvider[provider], !data.accounts.isEmpty else {
+            return nil
+        }
+        let metadata: [String: ProviderTokenAccountMetadata]
+        do {
+            metadata = try ProviderTokenAccountMetadataStore().loadMetadata(for: provider)
+        } catch {
+            Self.log.error("Account metadata load failed provider=\(provider.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .private)")
+            metadata = [:]
+        }
         let activeIndex = data.clampedActiveIndex()
         if metadata[data.accounts[activeIndex].id.uuidString]?.isDisabled != true {
             return data.accounts[activeIndex]

@@ -4,7 +4,7 @@
 
 import Foundation
 import Observation
-import VoidNotchKit
+import CoreGraphics
 
 /// Observable store for notch compact layout preferences (side content + width/height).
 @Observable

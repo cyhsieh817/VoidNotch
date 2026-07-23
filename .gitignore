@@ -34,6 +34,7 @@ playground.xcworkspace
 # User-specific Xcode / SwiftPM state (machine & username paths)
 xcuserdata/
 **/xcuserdata/
+.swiftpm/
 .swiftpm/xcode/xcuserdata/
 .swiftpm/config/
 *.xccheckout
@@ -109,3 +110,7 @@ coverage/
 # ----- Logs -----
 *.log
 logs/
+
+# 內部測試散佈產物（不進 git）
+deploy/landing-preview/site/downloads/
+.wrangler/

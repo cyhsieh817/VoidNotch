@@ -22,61 +22,11 @@ STAMP="$(date +%Y%m%d%H%M%S)"
 
 cd "$REPO_ROOT"
 
-# 版號：VERSION 檔（權威，見 VERSIONING.md）→ 可達 git tag → 0.0.0
-if [ -f "$REPO_ROOT/VERSION" ]; then
-    VERSION="$(tr -d '[:space:]' < "$REPO_ROOT/VERSION")"
-elif TAG_VER="$(git describe --tags --abbrev=0 2>/dev/null)"; then
-    VERSION="${TAG_VER#v}"
-else
-    VERSION="0.0.0"
-fi
-# Info.plist 行銷版號去掉 -dev 後綴（建置序另用 CFBundleVersion）
-MARKETING_VERSION="${VERSION%-dev}"
-BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
+# shellcheck source=lib/app_bundle.sh
+source "$REPO_ROOT/scripts/lib/app_bundle.sh"
 
-echo "==> swift build -c release --product $BIN_NAME"
-swift build -c release --product "$BIN_NAME"
-BIN_PATH="$(swift build -c release --product "$BIN_NAME" --show-bin-path)/$BIN_NAME"
-
-# 專案禁 rm：舊 bundle 移到 build/.trash 留回溯線
-mkdir -p "$BUILD_DIR"
-if [ -d "$APP" ]; then
-    mkdir -p "$BUILD_DIR/.trash"
-    mv "$APP" "$BUILD_DIR/.trash/VoidNotch.app.$STAMP"
-fi
-
-echo "==> 組裝 $APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN_PATH" "$APP/Contents/MacOS/$BIN_NAME"
-
-ICON_ICNS="$REPO_ROOT/resources/AppIcon/AppIcon.icns"
-if [ -f "$ICON_ICNS" ]; then
-    cp "$ICON_ICNS" "$APP/Contents/Resources/AppIcon.icns"
-    echo "==> App icon: Resources/AppIcon.icns"
-else
-    echo "警告：找不到 $ICON_ICNS（App 將無自訂圖示）" >&2
-fi
-
-cat > "$APP/Contents/Info.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>          <string>$BIN_NAME</string>
-    <key>CFBundleIdentifier</key>          <string>$BUNDLE_ID</string>
-    <key>CFBundleName</key>                <string>VoidNotch</string>
-    <key>CFBundleDisplayName</key>         <string>VoidNotch</string>
-    <key>CFBundlePackageType</key>         <string>APPL</string>
-    <key>CFBundleIconFile</key>            <string>AppIcon</string>
-    <key>CFBundleShortVersionString</key>  <string>$MARKETING_VERSION</string>
-    <key>CFBundleVersion</key>             <string>$BUILD_NUMBER</string>
-    <key>LSMinimumSystemVersion</key>      <string>14.0</string>
-    <key>LSUIElement</key>                 <true/>
-    <key>NSHighResolutionCapable</key>     <true/>
-    <key>NSHumanReadableCopyright</key>    <string>Copyright © 2026 CYHsieh. All rights reserved.</string>
-</dict>
-</plist>
-PLIST
+vn_derive_version
+vn_assemble_bundle
 
 echo "==> ad-hoc 簽名（同 Xcode Debug 路線；正式散佈才走 Developer ID + Notarization）"
 codesign --force --sign - --entitlements "$ENTITLEMENTS" "$APP"

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import VoidNotchSpeechKit
 
 /// PeonPing event-log(JSONL)解析。從檔案 IO 抽離,retentionCutoff 可注入以利測試。
 public enum AgentEventLogParser {
@@ -38,7 +39,88 @@ public enum AgentEventLogParser {
             workspace: workspace(from: payload),
             occurredAt: occurredAt,
             durationSeconds: doubleValue(for: "duration_seconds", in: payload)
-                ?? doubleValue(for: "durationSeconds", in: payload))
+                ?? doubleValue(for: "durationSeconds", in: payload),
+            inputRequest: inputRequest(from: payload),
+            navigation: navigation(from: payload))
+    }
+
+    private static func navigation(from payload: [String: Any]) -> AgentNavigationTarget? {
+        guard let object = payload["navigation"] as? [String: Any] else { return nil }
+
+        let rawSurface = navigationStringValue(for: "source_surface", in: object)
+            ?? navigationStringValue(for: "sourceSurface", in: object)
+        let sourceSurface = rawSurface.flatMap {
+            AgentNavigationSourceSurface(rawValue: $0)
+        } ?? .unknown
+
+        return AgentNavigationTarget(
+            sourceSurface: sourceSurface,
+            sessionID: nonEmptyNavigationString(for: "session_id", in: object),
+            tmuxSocket: absolutePathNavigationString(for: "tmux_socket", in: object),
+            tmuxPane: matchingNavigationString(for: "tmux_pane", pattern: #"^%[0-9]+$"#, in: object),
+            tmuxWindow: matchingNavigationString(for: "tmux_window", pattern: #"^@[0-9]+$"#, in: object),
+            tmuxSession: nonEmptyNavigationString(for: "tmux_session", in: object),
+            tmuxClientTTY: matchingNavigationString(
+                for: "tmux_client_tty",
+                pattern: #"^/dev/tty[A-Za-z0-9._-]+$"#,
+                in: object))
+    }
+
+    private static func navigationStringValue(for key: String, in payload: [String: Any]) -> String? {
+        guard let value = payload[key] as? String else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.rangeOfCharacter(from: .controlCharacters) == nil else {
+            return nil
+        }
+        return trimmed
+    }
+
+    private static func nonEmptyNavigationString(for key: String, in payload: [String: Any]) -> String? {
+        navigationStringValue(for: key, in: payload)
+    }
+
+    private static func absolutePathNavigationString(for key: String, in payload: [String: Any]) -> String? {
+        guard let value = navigationStringValue(for: key, in: payload), value.hasPrefix("/") else {
+            return nil
+        }
+        return value
+    }
+
+    private static func matchingNavigationString(
+        for key: String,
+        pattern: String,
+        in payload: [String: Any]) -> String?
+    {
+        guard let value = navigationStringValue(for: key, in: payload),
+              value.range(of: pattern, options: .regularExpression) != nil
+        else { return nil }
+        return value
+    }
+
+    private static func inputRequest(from payload: [String: Any]) -> AgentInputRequest? {
+        guard let object = payload["input_request"] as? [String: Any],
+              let rawID = object["request_id"] as? String,
+              let requestID = UUID(uuidString: rawID),
+              let rawQuestions = object["questions"] as? [[String: Any]], !rawQuestions.isEmpty
+        else { return nil }
+        let questions = rawQuestions.compactMap { item -> AgentInputQuestion? in
+            guard let question = item["question"] as? String, !question.isEmpty,
+                  let header = item["header"] as? String,
+                  let rawOptions = item["options"] as? [[String: Any]], !rawOptions.isEmpty
+            else { return nil }
+            let options = rawOptions.compactMap { option -> AgentInputOption? in
+                guard let label = option["label"] as? String, !label.isEmpty,
+                      let description = option["description"] as? String
+                else { return nil }
+                return AgentInputOption(label: label, description: description)
+            }
+            guard options.count == rawOptions.count else { return nil }
+            guard AgentSpeechOptionMatcher.isValid(labels: options.map(\.label)) else { return nil }
+            return AgentInputQuestion(question: question, header: header, options: options,
+                                      multiSelect: item["multiSelect"] as? Bool ?? false)
+        }
+        guard questions.count == rawQuestions.count else { return nil }
+        return AgentInputRequest(requestID: requestID, questions: questions)
     }
 
     // MARK: - Private helpers (moved verbatim from PeonPingAgentActivityProvider)
@@ -68,6 +150,8 @@ public enum AgentEventLogParser {
         if value.contains("gemini") || value.contains("agy") || value.contains("antigravity") {
             return .antigravity
         }
+        if value.contains("grok") { return .grok }
+        if value == "pi" { return .pi }   // 精確比對：避免 copilot / api 等含 "pi" 子字串誤判
         return nil
     }
 

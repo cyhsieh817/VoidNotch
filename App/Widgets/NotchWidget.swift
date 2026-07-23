@@ -10,40 +10,12 @@
 import SwiftUI
 import VoidNotchKit
 
-public enum NotchCompactPreferenceKey {
-    /// `true` means the left compact slot is kept visible; `false` means it collapses into the physical notch.
-    public static let leadingPinned = "VoidNotch.compact.leadingPinned"
-    /// `true` means the right compact slot is kept visible; `false` means it collapses into the physical notch.
-    public static let trailingPinned = "VoidNotch.compact.trailingPinned"
-    /// Max content width (pt) for leading compact slot.
-    public static let leadingMaxWidth = "VoidNotch.compact.leadingMaxWidth"
-    /// Max content width (pt) for trailing compact slot.
-    public static let trailingMaxWidth = "VoidNotch.compact.trailingMaxWidth"
-    /// Compact content height (pt).
-    public static let contentHeight = "VoidNotch.compact.contentHeight"
-
-    public static func side(_ widgetID: String) -> String {
-        "VoidNotch.widget.\(widgetID).side"
-    }
-
-    public static func maxWidthKey(for side: NotchSide) -> String {
-        switch side {
-        case .leading: return leadingMaxWidth
-        case .trailing: return trailingMaxWidth
-        }
-    }
-}
-
-public enum NotchWidgetPreferenceKey {
-    public static func enabled(_ id: String) -> String {
-        "VoidNotch.widget.\(id).enabled"
-    }
-}
-
 public protocol NotchWidget: Identifiable {
     var id: String { get }
     /// 收合狀態顯示優先權（高者優先佔用瀏海兩側窄條）。
     var priority: Int { get }
+    /// compact 條是否有內容；EmptyView 型 widget 回 false，避免 HStack 為零尺寸子視圖插 spacing。
+    var hasCompactContent: Bool { get }
 
     /// 收合：notch 兩側窄條（密度預算每側 ~80–160pt，見 spike §7）。
     @ViewBuilder func compactView() -> AnyView
@@ -55,6 +27,8 @@ public protocol NotchWidget: Identifiable {
 }
 
 public extension NotchWidget {
+    var hasCompactContent: Bool { true }
+
     var preferredSide: NotchSide {
         if let raw = UserDefaults.standard.string(forKey: NotchCompactPreferenceKey.side(id)),
            let side = NotchSide(rawValue: raw)
@@ -69,6 +43,7 @@ public extension NotchWidget {
         case "system": return "System Metrics"
         case "token": return "Model Usage"
         case "agent-activity": return "Agent Activity"
+        case "launchd-schedule": return "Scheduled Jobs"
         default: return id
         }
     }
@@ -78,6 +53,7 @@ public extension NotchWidget {
         case "system": return "CPU, memory, and thermal readings"
         case "token": return "Token, quota, and cost provider cards"
         case "agent-activity": return "Recent Codex, Claude, and Gemini work events"
+        case "launchd-schedule": return "launchd schedules across agent harnesses"
         default: return "Custom widget"
         }
     }
@@ -87,6 +63,7 @@ public extension NotchWidget {
         case "system": return "cpu"
         case "token": return "chart.bar.xaxis"
         case "agent-activity": return "waveform.path.ecg"
+        case "launchd-schedule": return "calendar.badge.clock"
         default: return "square.grid.2x2"
         }
     }

@@ -19,7 +19,7 @@ public final class TokenStore {
 
     private let usageProvider: any TokenUsageProviding
     private let accountManager: (any TokenAccountManaging)?
-    private var pollingTask: Task<Void, Never>?
+    private let pollingDriver = PollingDriver()
     private var refreshReplayRequested = false
     private let defaults: UserDefaults
     private let defaultsKey = "TokenStore.selectedProviderKinds"
@@ -280,6 +280,20 @@ public final class TokenStore {
         }
     }
 
+    @discardableResult
+    public func applyAccountToAgyCLI(_ accountID: UUID, for provider: TokenProviderKind) async -> Bool {
+        guard let accountManager else { return false }
+
+        do {
+            try await accountManager.applyAccountToAgyCLI(accountID, for: provider)
+            accountErrorMessages[provider] = nil
+            return true
+        } catch {
+            accountErrorMessages[provider] = error.localizedDescription
+            return false
+        }
+    }
+
     public func deleteAccount(_ accountID: UUID, for provider: TokenProviderKind) async {
         guard let accountManager else { return }
 
@@ -317,20 +331,13 @@ public final class TokenStore {
     }
 
     public func startPolling(interval: TimeInterval = 300) {
-        stopPolling()
-        let seconds = max(60, interval)
-        pollingTask = Task { [weak self] in
+        pollingDriver.start(interval: interval) { [weak self] in
             await self?.refresh()
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                await self?.refresh()
-            }
         }
     }
 
     public func stopPolling() {
-        pollingTask?.cancel()
-        pollingTask = nil
+        pollingDriver.stop()
     }
 
     private func ordered(_ snapshots: [ProviderUsage], matching providers: [TokenProviderKind]) -> [ProviderUsage] {

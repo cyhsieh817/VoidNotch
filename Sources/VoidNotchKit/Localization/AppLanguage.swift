@@ -14,15 +14,15 @@ public enum AppLanguage: String, CaseIterable, Sendable, Identifiable {
     /// UserDefaults key，App 層 @AppStorage 與狀態列選單共用。
     public static let preferenceKey = "VoidNotch.language"
 
-    public static let `default`: AppLanguage = .zhTW
+    public static let `default`: AppLanguage = .en
 
     public var id: String { rawValue }
 
     /// 語言切換器上的顯示名。
     public var pickerLabel: String {
         switch self {
-        case .zhTW: return "繁中"
-        case .en: return "EN"
+        case .zhTW: return "繁體中文"
+        case .en: return "English"
         }
     }
 

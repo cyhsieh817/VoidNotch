@@ -13,12 +13,14 @@ final class AppLanguageTests: XCTestCase {
         XCTAssertEqual(AppLanguage.resolve(""), .default)
     }
 
-    func test_default_is_zhTW() {
-        XCTAssertEqual(AppLanguage.default, .zhTW)
+    func test_default_is_english() {
+        XCTAssertEqual(AppLanguage.default, .en)
     }
 
     func test_picker_labels_are_distinct() {
         let labels = AppLanguage.allCases.map(\.pickerLabel)
         XCTAssertEqual(Set(labels).count, labels.count)
+        XCTAssertEqual(AppLanguage.en.pickerLabel, "English")
+        XCTAssertEqual(AppLanguage.zhTW.pickerLabel, "繁體中文")
     }
 }

@@ -31,29 +31,54 @@ struct AISummaryCapsule: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: TokenStore.compactRotationInterval)) { timeline in
             let usage = tokenStore.compactDisplayUsage(at: timeline.date)
-            HStack(spacing: 4) {
-                Image(systemName: usage?.provider.iconSystemName ?? "sparkles")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(usage?.provider.tint ?? Theme.Colors.text)
-                ViewThatFits(in: .horizontal) {
-                    Text(displayText(for: usage))
-                    Text(usage?.compactText(for: tokenStore.usageDisplayMode) ?? "-")
-                    Circle().fill(statusColor(for: usage)).frame(width: 6, height: 6)
+            // 優先顯示百分比；真的擠不下才退化成 icon + 狀態點。
+            // 候選皆含 icon，避免只剩裸圓點；nil usage 用中性佔位。
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 4) {
+                    providerIcon(for: usage)
+                    Text(compactValueText(for: usage))
+                    statusDot(for: usage)
                 }
-                Circle().fill(statusColor(for: usage)).frame(width: 6, height: 6)
+                HStack(spacing: 4) {
+                    providerIcon(for: usage)
+                    Text(compactValueText(for: usage))
+                }
+                HStack(spacing: 4) {
+                    providerIcon(for: usage)
+                    statusDot(for: usage)
+                }
             }
             .font(Theme.Fonts.compact())
             .foregroundStyle(Theme.Colors.text)
             .monospacedDigit()
+            .lineLimit(1)
             .frame(maxWidth: 140, alignment: .leading)
-            .clipped()
             .help(usage?.provider.displayName ?? "Auto")
         }
     }
 
-    private func displayText(for usage: ProviderUsage?) -> String {
-        guard let usage else { return "-" }
-        return "\(usage.provider.compactName) \(usage.compactText(for: tokenStore.usageDisplayMode))"
+    @ViewBuilder
+    private func providerIcon(for usage: ProviderUsage?) -> some View {
+        if let provider = usage?.provider {
+            ProviderGlyph(provider: provider, size: 10, weight: .semibold)
+                .foregroundStyle(provider.tint)
+        } else {
+            Image(systemName: "sparkles")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Theme.Colors.text)
+        }
+    }
+
+    private func statusDot(for usage: ProviderUsage?) -> some View {
+        Circle()
+            .fill(statusColor(for: usage))
+            .frame(width: 6, height: 6)
+    }
+
+    /// 有資料時用 compactText（含 %）；未登入/無資料時中性佔位，避免裸圓點。
+    private func compactValueText(for usage: ProviderUsage?) -> String {
+        guard let usage else { return "N/A" }
+        return usage.compactText(for: tokenStore.usageDisplayMode)
     }
 
     private func statusColor(for usage: ProviderUsage?) -> Color {
@@ -73,7 +98,7 @@ struct TokenExpandedView: View {
     @AppStorage(AppLanguage.preferenceKey) private var languageRaw = AppLanguage.default.rawValue
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 8) {
             header
             ProviderBookmarkBar(
                 providers: store.providers,
@@ -86,7 +111,8 @@ struct TokenExpandedView: View {
                     displayMode: store.usageDisplayMode)
             }
         }
-        .padding(14)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .frame(minWidth: 390, maxWidth: 470)
     }
 
@@ -107,6 +133,7 @@ struct TokenExpandedView: View {
                     Text(mode.label).tag(mode)
                 }
             }
+            .labelsHidden()
             .pickerStyle(.segmented)
             .frame(width: 116)
 
@@ -133,17 +160,15 @@ private struct ProviderBookmarkBar: View {
     let onSelect: (TokenProviderKind) -> Void
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(providers) { usage in
-                    ProviderBookmarkButton(
-                        usage: usage,
-                        isSelected: selectedProvider == usage.provider,
-                        onSelect: { onSelect(usage.provider) })
-                }
+        HStack(spacing: 6) {
+            ForEach(providers) { usage in
+                ProviderBookmarkButton(
+                    usage: usage,
+                    isSelected: selectedProvider == usage.provider,
+                    onSelect: { onSelect(usage.provider) })
             }
         }
-        .frame(height: 30)
+        .frame(height: 22)
     }
 }
 
@@ -155,8 +180,7 @@ private struct ProviderBookmarkButton: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 5) {
-                Image(systemName: usage.provider.iconSystemName)
-                    .font(.system(size: 10, weight: .semibold))
+                ProviderGlyph(provider: usage.provider, size: 10, weight: .semibold)
                 Text(usage.provider.shortDisplayName)
                     .lineLimit(1)
                 Circle()
@@ -165,8 +189,8 @@ private struct ProviderBookmarkButton: View {
             }
             .font(.system(size: 10, weight: .semibold, design: .rounded))
             .foregroundStyle(isSelected ? usage.provider.tint : .white.opacity(0.72))
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
             .background(background, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
@@ -191,9 +215,9 @@ private struct TokenProviderUsageCard: View {
         let sortedWindows = provider.sortedUsageWindows
         let l10n = L10n(rawValue: languageRaw)
 
-        VStack(alignment: .leading, spacing: 11) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 10) {
-                ProviderIcon(provider: provider.provider)
+                ProviderIcon(provider: provider.provider, size: 28)
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
@@ -213,7 +237,7 @@ private struct TokenProviderUsageCard: View {
 
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(provider.primaryMetricText(for: displayMode))
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
                         .monospacedDigit()
                     Text(provider.updatedText ?? l10n.notRefreshed)
                         .font(.system(size: 9, weight: .medium))
@@ -253,7 +277,7 @@ private struct TokenProviderUsageCard: View {
                     .lineLimit(2)
             }
         }
-        .padding(12)
+        .padding(10)
         .notchCard(
             fillOpacity: provider.status == .available ? 0.075 : 0.045,
             border: provider.status.borderColor,

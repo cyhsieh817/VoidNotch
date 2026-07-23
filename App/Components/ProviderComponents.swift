@@ -5,8 +5,90 @@
 //  先前各自實作 icon / 狀態徽章，此處合併；視覺對應見 ProviderAppearance.swift。
 //
 
+import AppKit
 import SwiftUI
 import VoidNotchKit
+
+/// Provider 顯示 glyph。每個 provider 以自己的 AppStorage key 即時觀察並持久化外觀。
+/// 內層以 provider.rawValue 為 id 的 storage-backed view，避免 provider 輪替時沿用前一個 key。
+struct ProviderGlyph: View {
+    let provider: TokenProviderKind
+    let size: CGFloat
+    let weight: Font.Weight
+
+    init(provider: TokenProviderKind, size: CGFloat, weight: Font.Weight) {
+        self.provider = provider
+        self.size = size
+        self.weight = weight
+    }
+
+    var body: some View {
+        ProviderGlyphStorage(provider: provider, size: size, weight: weight)
+            .id(provider.rawValue)
+    }
+}
+
+/// 綁定單一 provider 的 icon 偏好；僅由 ProviderGlyph 建立，隨 .id 重建。
+private struct ProviderGlyphStorage: View {
+    let provider: TokenProviderKind
+    let size: CGFloat
+    let weight: Font.Weight
+    @AppStorage private var choiceRawValue: String
+
+    init(provider: TokenProviderKind, size: CGFloat, weight: Font.Weight) {
+        self.provider = provider
+        self.size = size
+        self.weight = weight
+        _choiceRawValue = AppStorage(
+            wrappedValue: ProviderIconChoice.default.rawValue,
+            ProviderIconChoice.preferenceKey(for: provider))
+    }
+
+    var body: some View {
+        ProviderGlyphArtwork(
+            provider: provider,
+            choice: ProviderIconChoice(rawValue: choiceRawValue) ?? .default,
+            size: size,
+            weight: weight)
+    }
+}
+
+/// 固定 choice 的 glyph artwork，供設定選項預覽；實際 provider 顯示一律使用 ProviderGlyph。
+struct ProviderGlyphArtwork: View {
+    let provider: TokenProviderKind
+    let choice: ProviderIconChoice
+    let size: CGFloat
+    let weight: Font.Weight
+
+    var body: some View {
+        Group {
+            if let image = resourceImage {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size, height: size)
+            } else {
+                Image(systemName: provider.iconSystemName)
+                    .font(.system(size: size, weight: weight))
+                    .frame(height: size)
+            }
+        }
+    }
+
+    private var resourceImage: NSImage? {
+        guard let resourceName = choice.resourceName,
+              let url = Bundle.main.url(
+                  forResource: resourceName,
+                  withExtension: "svg",
+                  subdirectory: "provider-icons"),
+              let image = NSImage(contentsOf: url)
+        else {
+            return nil
+        }
+        image.isTemplate = true
+        return image
+    }
+}
 
 /// 圓角色塊 + provider SF Symbol。size 決定整體尺寸，字級與圓角按比例縮放。
 struct ProviderIcon: View {
@@ -17,8 +99,7 @@ struct ProviderIcon: View {
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
                 .fill(provider.tint.opacity(0.18))
-            Image(systemName: provider.iconSystemName)
-                .font(.system(size: size * 0.47, weight: .semibold))
+            ProviderGlyph(provider: provider, size: size * 0.47, weight: .semibold)
                 .foregroundStyle(provider.tint)
         }
         .frame(width: size, height: size)

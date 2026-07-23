@@ -1,4 +1,31 @@
-MIT License
+VoidNotch Community Edition — MIT License
+==========================================
+
+SCOPE OF THIS GRANT
+-------------------
+This MIT License covers the VoidNotch Community Edition source code as published
+by the copyright holder at the release tags of:
+
+    https://github.com/cyhsieh817/VoidNotch
+    (currently tags v0.6.0 and v0.8.0)
+
+That grant is irrevocable for the code published at those tags. Anyone may use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell copies of that
+code under the terms below, in perpetuity.
+
+This grant does NOT extend to:
+
+  * material of the VoidNotch Pro edition that is not published in this
+    repository (licensed separately under the VoidNotch Pro EULA), or
+  * the "VoidNotch" name or logo, which are trademarks. The MIT License grants
+    rights in copyright only, never in trademark.
+
+The copyright holder is under no obligation to publish future versions under this
+or any other open-source license.
+
+
+MIT LICENSE TEXT
+----------------
 
 Copyright (c) 2026 CYHsieh
 
@@ -19,8 +46,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-This product includes third-party software. See THIRD-PARTY-NOTICES.md for
-attributions and the full text of third-party licenses.

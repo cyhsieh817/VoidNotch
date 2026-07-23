@@ -20,9 +20,11 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "SystemMonitor", targets: ["SystemMonitor"]),
+        .library(name: "VoidNotchSpeechKit", targets: ["VoidNotchSpeechKit"]),
         .library(name: "VoidNotchKit", targets: ["VoidNotchKit"]),
         .executable(name: "vn-probe", targets: ["vn-probe"]),
         .executable(name: "VoidNotch", targets: ["VoidNotch"]),
+        .executable(name: "VoidNotchDebug", targets: ["VoidNotchDebug"]),
     ],
     dependencies: [
         // revision 對齊 VoidNotch.xcodeproj 的 Package.resolved，兩條建置路徑用同一組依賴。
@@ -41,10 +43,16 @@ let package = Package(
             dependencies: ["CSensors"],
             path: "Sources/SystemMonitor"
         ),
+        // 題目選項語音辨識的窄化依賴；不得依賴 production kit 或其他專案 target。
+        .target(
+            name: "VoidNotchSpeechKit",
+            path: "Sources/VoidNotchSpeechKit"
+        ),
         // UI-free 純邏輯層:token 模型/格式化、agent JSONL 解析、佈局與並行 helper。
         // 與 SystemMonitor 同樣零 SwiftUI,CommandLineTools 可 `swift test`。
         .target(
             name: "VoidNotchKit",
+            dependencies: ["SystemMonitor", "VoidNotchSpeechKit"],
             path: "Sources/VoidNotchKit"
         ),
         .testTarget(
@@ -83,6 +91,11 @@ let package = Package(
             ],
             path: "App",
             exclude: ["README.md", "VoidNotch.entitlements"]
+        ),
+        .executableTarget(
+            name: "VoidNotchDebug",
+            dependencies: ["VoidNotchSpeechKit"],
+            path: "DebugApp"
         ),
     ]
 )

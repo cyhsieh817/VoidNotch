@@ -6,9 +6,14 @@
     <!-- 確定不可上 Mac App Store；走 Developer ID + Notarization。 -->
     <!-- 見 docs/research/distribution-and-entitlements.md。 -->
 
-    <!-- Sparkle 自動更新 / 框架載入需要 -->
-    <key>com.apple.security.cs.disable-library-validation</key>
-    <true/>
+    <!-- 2026-07-14 移除 com.apple.security.cs.disable-library-validation。
+         它原本是為 Sparkle 自動更新加的，但 Sparkle 從未被連結：Package.swift 零命中，
+         Package.resolved 裡的 Sparkle 只是 CodexBar 的傳遞相依，而我們只連 CodexBarCore，
+         它並不依賴 Sparkle。為一個不存在的框架在 hardened runtime 上開洞是白給的攻擊面，
+         也會讓 notarization 審查多一項要解釋的東西。日後真的接上 Sparkle 時再加回來。
+
+         hardened runtime 不阻擋 outbound，故無需 network.client；
+         若日後接入需網路的功能，再依 sandbox 設定開啟。 -->
 
     <!-- 若 Phase 5 加 Widget extension 共享快照才需要（先註解）：
     <key>com.apple.security.application-groups</key>

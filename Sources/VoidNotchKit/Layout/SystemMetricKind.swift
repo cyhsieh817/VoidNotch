@@ -16,18 +16,29 @@ public enum SystemMetricKind: String, CaseIterable, Sendable, Identifiable {
     public var id: String { rawValue }
 
     /// Short label (EN source of truth).
-    public var label: String {
-        switch self {
-        case .cpu: return "CPU"
-        case .memory: return "Memory"
-        case .disk: return "Disk"
-        case .network: return "Network"
-        case .battery: return "Battery"
-        case .temperature: return "Temp"
-        case .health: return "Health"
-        case .host: return "Host"
-        case .processes: return "Processes"
-        case .gpu: return "GPU"
+    public var label: String { label(language: .en) }
+
+    /// Localized short label for settings / catalog UI.
+    public func label(language: AppLanguage) -> String {
+        switch (self, language) {
+        case (.cpu, _): return "CPU"
+        case (.gpu, _): return "GPU"
+        case (.memory, .zhTW): return "記憶體"
+        case (.memory, .en): return "Memory"
+        case (.disk, .zhTW): return "磁碟"
+        case (.disk, .en): return "Disk"
+        case (.network, .zhTW): return "網路"
+        case (.network, .en): return "Network"
+        case (.battery, .zhTW): return "電池"
+        case (.battery, .en): return "Battery"
+        case (.temperature, .zhTW): return "溫度"
+        case (.temperature, .en): return "Temp"
+        case (.health, .zhTW): return "健康度"
+        case (.health, .en): return "Health"
+        case (.host, .zhTW): return "主機"
+        case (.host, .en): return "Host"
+        case (.processes, .zhTW): return "行程"
+        case (.processes, .en): return "Processes"
         }
     }
 

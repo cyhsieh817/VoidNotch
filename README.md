@@ -4,9 +4,9 @@
 [![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-blue.svg)](#requirements)
 [![Swift](https://img.shields.io/badge/Swift-6-orange.svg)](Package.swift)
 
-**Turn your MacBook notch into a live dashboard** for system health and AI coding-provider usage.
+**Turn your MacBook notch into a live dashboard** for system health, AI coding-provider usage, and agent activity.
 
-macOS Notch 系統監控 + AI Token 用量 HUD。把瀏海變成可展開的即時儀表板。
+macOS Notch 系統監控 + AI Token 用量 + Agent 活動 HUD。把瀏海變成可展開的即時儀表板。
 
 ---
 
@@ -16,8 +16,11 @@ macOS Notch 系統監控 + AI Token 用量 HUD。把瀏海變成可展開的即�
 |:--|:--|
 | **System** | CPU, RAM, disk, network, battery, health score, top processes, optional temps / GPU util |
 | **AI usage** | Live / quota-style snapshots via [CodexBarCore](https://github.com/steipete/CodexBar) (Claude, Codex, Copilot, Gemini/Agy, Grok, …) |
-| **Notch UI** | Compact strip + expanded dashboard; click to expand, right-click for settings |
-| **Customization** | Choose widgets per side, compact width/height, which system metrics to show |
+| **Multi-account** | Account pool for Gemini/Agy — import, switch, per-account quota, apply back to the agy CLI |
+| **Agent activity** | Live lifecycle feed from Claude Code / Codex / Gemini / Grok / pi / hermes hooks — notch alerts, per-event TTS voice alerts (zh-TW / en-US), connection diagnostics |
+| **Scheduled** | launchd schedule overview across agent harnesses — run / paused / archived, with safe removal |
+| **Notch UI** | Compact strip + expanded dashboard; floating gauge with selectable skins; click to expand, right-click for settings |
+| **Customization** | Choose widgets per side, compact width/height, metrics selection, gauge scale & skins |
 | **Language** | Traditional Chinese & English |
 
 Unsupported providers are labeled clearly (not shown as 0% usage).
@@ -43,22 +46,28 @@ cd VoidNotch
 
 Open `VoidNotch.xcodeproj` if you prefer Xcode Previews / debugging. Dependencies resolve from the root `Package.swift` (same pins as CLI).
 
-First launch: allow any macOS prompts for local network / accessibility only if you enable features that need them. Token usage reads **local CLI/session data** and (for some providers) browser session cookies — no VoidNotch cloud account.
+First launch: allow any macOS prompts for local network / accessibility only if you enable features that need them. Token usage reads **local CLI/session data** — no VoidNotch cloud account, no telemetry.
 
 ## Usage
 
 1. Start the app — it lives in the **menu bar** (no Dock icon by default).
 2. **Compact**: system metrics and/or AI summary on the notch sides (configurable).
 3. **Left-click** the notch area to expand the dashboard.
-4. **Right-click** for Settings (providers, layout, metrics, language).
+4. **Right-click** for Settings (providers, layout, metrics, alerts, schedules, language).
 5. Menu bar → Refresh Token Usage when quotas look stale.
+
+## VoidNotch Pro
+
+This repository is the free, MIT-licensed Community Edition — it is the full app you can build and use daily.
+
+A paid **Pro edition** (separate, closed-source) adds the ability to **answer agent prompts directly from the notch** (approve Codex commands, reply to Claude questions, etc.), with more Pro features planned. Follow releases here or check the in-app update banner for availability.
 
 ## Develop & test
 
 ```bash
 swift run vn-selftest    # smoke tests (no XCTest host required for the harness)
-swift test              # full XCTest suite
-swift run vn-probe 5    # print live samples for 5 seconds
+swift test               # full XCTest suite
+swift run vn-probe 5     # print live samples for 5 seconds
 swift build --product VoidNotch
 ```
 
@@ -67,7 +76,7 @@ swift build --product VoidNotch
 | Path | Role |
 |:--|:--|
 | `Sources/SystemMonitor` | Pure data layer (CPU/RAM/disk/net/battery/…) |
-| `Sources/VoidNotchKit` | UI-free token/agent/layout models |
+| `Sources/VoidNotchKit` | UI-free token/agent/launchd/layout models |
 | `Sources/CSensors` | Apple Silicon thermal bridge (best-effort) |
 | `App/` | SwiftUI shell (DynamicNotchKit) |
 | `scripts/make_app.sh` | CLI package to `.app` |
@@ -98,12 +107,12 @@ Please do not commit secrets (API keys, OAuth tokens, `auth.json`, etc.).
 
 ## License
 
-[MIT](LICENSE) © 2026 CYHsieh
+[MIT](LICENSE) © 2026 CYHsieh — source only; the **VoidNotch name and logo are trademarks** and are not covered by the MIT grant.
 
-You are free to use, modify, and redistribute under the MIT terms. Attribution via the license notice is appreciated.
+You are free to use, modify, and redistribute the source under the MIT terms. Attribution via the license notice is appreciated.
 
 ## Versioning & Changelog
 
-- **Current:** see root [`VERSION`](VERSION) (`0.6.0`).
+- **Current:** see root [`VERSION`](VERSION) (`0.8.0`).
 - **Rules:** [`VERSIONING.md`](VERSIONING.md) (SemVer; 0.x pre-stable; 1.0 gates).
 - **History:** [CHANGELOG.md](CHANGELOG.md) (rebaselined from `0.1.0` on 2026-07-09).

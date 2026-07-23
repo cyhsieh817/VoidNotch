@@ -8,6 +8,43 @@
 import SwiftUI
 import VoidNotchKit
 
+enum ProviderIconChoice: String, CaseIterable, Identifiable {
+    case `default`
+    case systemHealth
+    case modelUsage
+    case agentActivity
+    case notification
+    case displayMode
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .default: return "Default"
+        case .systemHealth: return "System Health"
+        case .modelUsage: return "Model Usage"
+        case .agentActivity: return "Agent Activity"
+        case .notification: return "Notification"
+        case .displayMode: return "Display Mode"
+        }
+    }
+
+    var resourceName: String? {
+        switch self {
+        case .default: return nil
+        case .systemHealth: return "system-health"
+        case .modelUsage: return "model-usage"
+        case .agentActivity: return "agent-activity"
+        case .notification: return "notification"
+        case .displayMode: return "display-mode"
+        }
+    }
+
+    static func preferenceKey(for provider: TokenProviderKind) -> String {
+        "VoidNotch.providerIcon.\(provider.rawValue)"
+    }
+}
+
 extension TokenProviderKind {
     var iconSystemName: String {
         switch self {

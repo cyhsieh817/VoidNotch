@@ -85,4 +85,11 @@ final class TokenUsageTests: XCTestCase {
         XCTAssertEqual(TokenProviderKind.grok.displayName, "Grok")
         XCTAssertEqual(TokenProviderKind.grok.settingsDetail, "Grok credits via CLI/web billing")
     }
+
+    func test_compact_display_names_are_non_empty_and_short() {
+        for provider in TokenProviderKind.allCases {
+            XCTAssertFalse(provider.compactDisplayName.isEmpty, provider.rawValue)
+            XCTAssertLessThanOrEqual(provider.compactDisplayName.count, 7, provider.rawValue)
+        }
+    }
 }

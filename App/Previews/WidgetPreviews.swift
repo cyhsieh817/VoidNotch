@@ -171,6 +171,11 @@ private enum PreviewFixtures {
         registry.register(AgentActivityWidget(store: agentActivityStore))
         return registry
     }()
+
+    /// 空 adapters：預覽用，不觸碰真實檔案系統。
+    static let hookWiringStore = HookWiringStore(
+        installer: HookInstaller(adapters: [], paths: AppDelegate.hookPaths(), clock: { Date() }))
+
 }
 
 #Preview("System Compact") {
@@ -204,7 +209,16 @@ private enum PreviewFixtures {
 }
 
 #Preview("Provider Settings") {
-    ProviderSettingsView(store: PreviewFixtures.tokenStore, registry: PreviewFixtures.widgetRegistry)
+    ProviderSettingsView(
+        store: PreviewFixtures.tokenStore,
+        registry: PreviewFixtures.widgetRegistry,
+        hookWiringStore: PreviewFixtures.hookWiringStore,
+        onRewireHook: { _ in },
+        onUnwireHook: { _ in },
+        launchdScheduleStore: LaunchdScheduleStore(),
+        updateCheckStore: UpdateCheckStore(
+            client: UpdateCheckClient(endpoint: VoidNotchLinks.updateEndpoint),
+            currentVersion: "0.0.0"))
         .background(.black.opacity(0.85))
 }
 

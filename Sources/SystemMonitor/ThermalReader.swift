@@ -19,27 +19,10 @@ public final class ThermalReader {
     public func read() -> ThermalSnapshot {
         var failureCode: Int = 0
         let sensors = VNReadAppleSiliconTemperaturesWithFailure(&failureCode) // [名稱: 攝氏]
-
-        var cpuVals: [Double] = []
-        var gpuVals: [Double] = []
-        var socVals: [Double] = []
-
-        for (name, value) in sensors {
-            let temp = value.doubleValue
-            if name.hasPrefix("pACC") || name.hasPrefix("eACC") {
-                cpuVals.append(temp)
-            } else if name.hasPrefix("GPU") {
-                gpuVals.append(temp)
-            } else if name.hasPrefix("SOC") {
-                socVals.append(temp)
-            }
+        let temperatures = sensors.reduce(into: [String: Double]()) { result, sensor in
+            result[sensor.key] = sensor.value.doubleValue
         }
-
-        let snapshot = ThermalSnapshot(
-            cpu: cpuVals.average,
-            gpu: gpuVals.average,
-            soc: socVals.average
-        )
+        let snapshot = thermalSnapshot(from: temperatures)
 
         if snapshot.cpu != nil || snapshot.gpu != nil || snapshot.soc != nil {
             clearFailureIfRecovered()
@@ -65,6 +48,32 @@ public final class ThermalReader {
         }
         lastFailureReason = nil
     }
+}
+
+/// 將 IOHID 感測器依用途分類；CPU 專用鍵缺席時才採用 PMU die 溫度後備。
+func thermalSnapshot(from sensors: [String: Double]) -> ThermalSnapshot {
+    var cpuVals: [Double] = []
+    var cpuFallbackVals: [Double] = []
+    var gpuVals: [Double] = []
+    var socVals: [Double] = []
+
+    for (name, temp) in sensors {
+        if name.hasPrefix("pACC") || name.hasPrefix("eACC") {
+            cpuVals.append(temp)
+        } else if name.range(of: #"^PMU tdie[0-9]+$"#, options: .regularExpression) == name.startIndex..<name.endIndex {
+            cpuFallbackVals.append(temp)
+        } else if name.hasPrefix("GPU") {
+            gpuVals.append(temp)
+        } else if name.hasPrefix("SOC") {
+            socVals.append(temp)
+        }
+    }
+
+    return ThermalSnapshot(
+        cpu: (cpuVals.isEmpty ? cpuFallbackVals : cpuVals).average,
+        gpu: gpuVals.average,
+        soc: socVals.average
+    )
 }
 
 private extension Array where Element == Double {

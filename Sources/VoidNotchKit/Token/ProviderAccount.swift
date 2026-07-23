@@ -147,6 +147,7 @@ public protocol TokenAccountManaging: Sendable {
     func importAccount(for provider: TokenProviderKind) async throws -> ProviderAccount?
     func importAccounts(_ accountImport: ProviderAccountImport, for provider: TokenProviderKind) async throws -> [ProviderAccount]
     func exportAccounts(_ accountIDs: [UUID], for provider: TokenProviderKind) async throws -> ProviderAccountExport
+    func applyAccountToAgyCLI(_ accountID: UUID, for provider: TokenProviderKind) async throws
 }
 
 public extension TokenAccountManaging {
@@ -169,6 +170,10 @@ public extension TokenAccountManaging {
     func exportAccounts(_ accountIDs: [UUID], for provider: TokenProviderKind) async throws -> ProviderAccountExport {
         throw TokenAccountManagementError.unsupportedProvider(provider)
     }
+
+    func applyAccountToAgyCLI(_ accountID: UUID, for provider: TokenProviderKind) async throws {
+        throw TokenAccountManagementError.unsupportedProvider(provider)
+    }
 }
 
 public enum TokenAccountManagementError: LocalizedError, Sendable, Equatable {
@@ -178,6 +183,9 @@ public enum TokenAccountManagementError: LocalizedError, Sendable, Equatable {
     case noImportableAccount(TokenProviderKind)
     case invalidImportData(TokenProviderKind)
     case noExportableAccount(TokenProviderKind)
+    case agyTokenFileMissing
+    case agyTokenFileConflict
+    case accountMissingRefreshToken
 
     public var errorDescription: String? {
         switch self {
@@ -193,6 +201,12 @@ public enum TokenAccountManagementError: LocalizedError, Sendable, Equatable {
             return "The pasted \(provider.displayName) account data could not be imported."
         case let .noExportableAccount(provider):
             return "No exportable \(provider.displayName) account was found."
+        case .agyTokenFileMissing:
+            return "The agy CLI token file was not found. Sign in with the agy CLI once, then retry."
+        case .agyTokenFileConflict:
+            return "The agy CLI token file changed while applying. Refresh accounts and retry."
+        case .accountMissingRefreshToken:
+            return "The selected account has no refresh token to apply."
         }
     }
 }
