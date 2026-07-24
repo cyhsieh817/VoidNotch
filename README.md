@@ -56,11 +56,24 @@ First launch: allow any macOS prompts for local network / accessibility only if 
 4. **Right-click** for Settings (providers, layout, metrics, alerts, schedules, language).
 5. Menu bar → Refresh Token Usage when quotas look stale.
 
-## VoidNotch Pro
+## Free vs Pro
 
-This repository is the free, MIT-licensed Community Edition — it is the full app you can build and use daily.
+This repository is the free, MIT-licensed Community Edition — the full observability app, no time limit, no account.
 
-A paid **Pro edition** (separate, closed-source) adds the ability to **answer agent prompts directly from the notch** (approve Codex commands, reply to Claude questions, etc.), with more Pro features planned. Follow releases here or check the in-app update banner for availability.
+| | **Free (this repo)** | **Pro** |
+|:--|:--:|:--:|
+| System monitoring (CPU / RAM / temps / processes) | ✅ | ✅ |
+| AI provider usage & quotas (Claude, Codex, Gemini, Grok, …) | ✅ | ✅ |
+| Multi-account pool for Gemini/Agy (import, switch, per-account quota) | ✅ | ✅ |
+| Agent activity feed + voice alerts + connection diagnostics | ✅ | ✅ |
+| launchd schedule overview with safe removal | ✅ | ✅ |
+| Floating gauge, skins, bilingual UI | ✅ | ✅ |
+| **Answer agent prompts from the notch** (approve Codex commands, reply to Claude Code questions) | — | ✅ |
+| Voice answering & answer-card system notifications | — | ✅ |
+
+**Pro is a one-time purchase — US$15 for up to 3 Macs, no subscription.**
+Get it at **[voidnotch.labgrimoire.com](https://voidnotch.labgrimoire.com)** —
+the site also hosts a **pre-built, notarized download** (free tier included) if you'd rather skip building from source.
 
 ## Develop & test
 
