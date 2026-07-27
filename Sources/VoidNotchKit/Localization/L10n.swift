@@ -119,6 +119,12 @@ public struct L10n {
     public var pillRecent: String { pick("近期", "Recent") }
     public var noAgentEvents: String { pick("沒有 agent 事件", "No agent events") }
     public var relayNotConnected: String { pick("PeonPing relay 未連接", "PeonPing relay not connected") }
+    public var submitAnswer: String { pick("送出", "Submit") }
+    public var answerSent: String { pick("已送出", "Answer sent") }
+    public var answerFailed: String { pick("無法送出回答，請再試一次。", "Could not send the answer. Please try again.") }
+    public var proUpsellAnswerInNotch: String {
+        pick("在瀏海裡直接回答需要 Pro", "Answering in the notch requires Pro")
+    }
 
     // MARK: 設定視窗
 
@@ -126,6 +132,63 @@ public struct L10n {
     public var settingsTabSystem: String { pick("系統指標", "System") }
     public var settingsTabProviders: String { pick("AI 用量", "Providers") }
     public var settingsTabAlerts: String { pick("提示", "Alerts") }
+    public var settingsTabUpdates: String { pick("軟體更新", "Updates") }
+    public var settingsTabLicense: String { pick("授權", "License") }
+    public var licenseTitle: String { pick("VoidNotch Pro 授權", "VoidNotch Pro License") }
+    public var licenseKeyPlaceholder: String { pick("貼上你的授權碼", "Paste your license key") }
+    public var licenseActivate: String { pick("啟用", "Activate") }
+    public var licenseDeactivate: String { pick("解除此台啟用", "Deactivate this Mac") }
+    public var licenseStatusUnlicensed: String {
+        pick("尚未啟用 · 目前為 Community 版", "Not activated · Community edition")
+    }
+    public var licenseStatusActivating: String { pick("啟用中…", "Activating…") }
+    public var licenseStatusActive: String { pick("已啟用 · Pro", "Activated · Pro") }
+    public var licenseStatusGrace: String {
+        pick("暫時無法連線驗證，仍可使用", "Cannot verify right now, still usable")
+    }
+    public var licenseStatusInvalid: String { pick("授權無效", "License invalid") }
+    public var licenseStatusTrial: String { pick("試用中 · Pro", "Trial · Pro") }
+    public var licenseBuyPrompt: String { pick("還沒有授權碼？", "No license key yet?") }
+    public var licenseBuyLink: String { pick("購買 VoidNotch Pro", "Buy VoidNotch Pro") }
+
+    /// 授權狀態的完整句子。標點跟著語言走——EN 不可留全形（）：。
+    public func licenseStatusActiveDetail(_ activatedAt: String) -> String {
+        pick("\(licenseStatusActive)（本機已啟用於 \(activatedAt)）",
+             "\(licenseStatusActive) (this Mac, activated \(activatedAt))")
+    }
+    public func licenseStatusGraceDetail(_ daysRemaining: Int) -> String {
+        pick("\(licenseStatusGrace)（剩 \(daysRemaining) 天）",
+             "\(licenseStatusGrace) (\(daysRemaining) days left)")
+    }
+    public func licenseStatusInvalidDetail(_ reason: String) -> String {
+        pick("\(licenseStatusInvalid)：\(reason)", "\(licenseStatusInvalid): \(reason)")
+    }
+    /// Trial detail: rounded-up remaining hours plus the absolute expiry time.
+    public func licenseStatusTrialDetail(hoursRemaining: Int, expiresAt: String) -> String {
+        pick(
+            "\(licenseStatusTrial)（剩約 \(hoursRemaining) 小時，至 \(expiresAt)）",
+            "\(licenseStatusTrial) (about \(hoursRemaining) hours left, until \(expiresAt))")
+    }
+    public func licenseKeychainWarning(_ message: String) -> String {
+        pick(
+            "Pro 已啟用，但授權碼存不進 Keychain，重開 App 後會失效：\(message)",
+            "Pro is active, but the license key could not be saved to the Keychain. "
+                + "It will be lost when the app restarts: \(message)")
+    }
+
+    // MARK: 授權失效原因（由 LicenseInvalidReason 轉譯，勿在 store 裡寫死字串）
+
+    public var licenseInvalidKeyNotFound: String { pick("找不到授權碼", "License key not found") }
+    public var licenseInvalidActivationLimit: String {
+        pick("已達啟用數量上限", "Activation limit reached")
+    }
+    public var licenseInvalidMalformedResponse: String {
+        pick("授權服務回傳無法解析的內容", "The licensing service returned an unreadable response")
+    }
+    public var licenseInvalidRevoked: String { pick("授權已失效", "This license is no longer valid") }
+    public var licenseInvalidGraceExpired: String {
+        pick("離線寬限期已屆滿", "The offline grace period has expired")
+    }
     public var providersTitle: String { pick("模型供應商", "Providers") }
     public var metricLabel: String { pick("指標", "Metric") }
     public var refresh: String { pick("重新整理", "Refresh") }
@@ -203,6 +266,39 @@ public struct L10n {
     public var agentSpeechEnableHint: String { agentSpeechHint }
     public var agentSpeechVoiceSystemDefault: String { agentSpeechSystemVoice }
 
+    // MARK: 問答卡系統通知鏡像
+
+    public var agentAlertNotificationMirrorTitle: String { pick("代答卡系統通知", "Answer card notifications") }
+    public var agentAlertNotificationMirrorHint: String {
+        pick(
+            "瀏海彈出可作答卡、或卡片逾時自動放行時，同步發一則系統通知。內容只含來源與標題摘要，不含完整問題或路徑。預設關閉，開啟當下才會請求系統授權。",
+            "Mirrors an answerable card — and its unanswered timeout — as a system notification. Content is limited to the source and a title summary, never the full question or a path. Off by default; turning it on requests system permission right then.")
+    }
+    public func agentAlertNotificationInputRequestTitle(_ provider: String) -> String {
+        pick("\(provider) 需要你的選擇", "\(provider) needs your input")
+    }
+    public func agentAlertNotificationInputRequestBody(title: String, questionSummary: String?) -> String {
+        guard let questionSummary, !questionSummary.isEmpty, questionSummary != title else { return title }
+        return "\(title) · \(questionSummary)"
+    }
+    public func agentAlertNotificationReleasedTitle(_ provider: String) -> String {
+        pick("\(provider) 已放行回終端機", "\(provider) released back to the terminal")
+    }
+    public var agentAlertNotificationReleasedBody: String {
+        pick("問答卡逾時未作答，已自動關閉。", "The card timed out unanswered and closed automatically.")
+    }
+
+    // MARK: 問答卡字級倍率
+
+    public var agentAlertTextScaleTitle: String { pick("問答卡字級", "Answer card text size") }
+    public var agentAlertTextScaleHint: String {
+        pick("調整瀏海問答卡的文字大小，立即套用於下一次彈出的卡片。", "Adjusts the answer card's text size. Takes effect the next time a card appears.")
+    }
+    public var agentAlertTextScaleSmall: String { pick("小", "Small") }
+    public var agentAlertTextScaleStandard: String { pick("標準", "Standard") }
+    public var agentAlertTextScaleLarge: String { pick("大", "Large") }
+    public var agentAlertTextScaleExtraLarge: String { pick("特大", "Extra Large") }
+
     public func alertSoundCategoryTitle(_ category: AlertSoundCategory) -> String {
         switch category {
         case .sessionStart: return pick("工作階段開始", "Session Started")
@@ -277,8 +373,10 @@ public struct L10n {
     public var layoutTabGauge: String { pick("浮動儀表", "Floating Gauge") }
     public var alertsTabSound: String { pick("音效", "Sound") }
     public var alertsTabSpeech: String { pick("語音", "Speech") }
+    public var alertsTabCard: String { pick("問答卡", "Answer Card") }
     public var alertsTabAgentWiring: String { pick("Agent 接線", "Agent Wiring") }
     public var providerTabUsage: String { pick("用量", "Usage") }
+    public var providerTabDaily: String { pick("每日", "Daily") }
     public var providerTabDetails: String { pick("資訊", "Details") }
     public var providerTabAccounts: String { pick("帳號", "Accounts") }
     public var providerAccountsUnsupported: String {
@@ -339,7 +437,12 @@ public struct L10n {
     public func connectionPendingCount(_ count: Int) -> String {
         pick("\(count) 待處理", "\(count) pending")
     }
-    public var connectionDetailInstalled: String {
+    public var capabilityAnswerable: String { pick("可作答", "Can answer") }
+    public var capabilityNotifyOnly: String { pick("只通知", "Notify only") }
+    public var connectionDetailInstalledAnswerable: String {
+        pick("已接通 · 可在瀏海作答", "Connected · Can answer in notch")
+    }
+    public var connectionDetailInstalledNotifyOnly: String {
         pick("已接通 · 只顯示活動", "Connected · Activity only")
     }
     public var connectionDetailNotInstalled: String {
@@ -363,5 +466,36 @@ public struct L10n {
     public func updateLastChecked(_ relative: String) -> String {
         pick("上次檢查：\(relative)", "Last checked: \(relative)")
     }
-    public var updateDownload: String { pick("前往下載", "Download") }
+    public var updateInstallNow: String { pick("立即更新", "Install Now") }
+    public var updateDownloading: String { pick("下載更新中…", "Downloading update…") }
+    public var updateExtracting: String { pick("準備更新檔案…", "Preparing update…") }
+    public var updateVerifying: String { pick("驗證更新檔案中…", "Verifying update…") }
+    public var updateInstalling: String { pick("即將重新啟動…", "Restarting with update…") }
+    public var updateManualDownload: String { pick("改用手動下載", "Download manually") }
+    public func updateError(_ error: SelfUpdateError) -> String {
+        switch error {
+        case .preflight("translocation"):
+            return pick(
+                "App 目前由系統隔離路徑執行，請先將 App 移到 Applications 資料夾再更新。",
+                "App Translocation is active. Move the app to Applications before updating.")
+        case .preflight("parent-not-writable"):
+            return pick(
+                "App 所在資料夾沒有寫入權限，請改用 Finder 手動安裝。",
+                "The app folder is not writable. Please install the update manually in Finder.")
+        case .preflight:
+            return pick("更新前置檢查失敗，請改用手動下載。", "Preflight failed. Please download and install manually.")
+        case .download:
+            return pick("更新下載失敗，請檢查網路或改用手動下載。", "The update download failed. Check your network or download manually.")
+        case .hashMismatch:
+            return pick("更新檔案驗證失敗，檔案可能已損毀；請稍後重試或手動下載。", "The update file failed its integrity check. Try again later or download manually.")
+        case .extract:
+            return pick("更新檔案無法解開，請改用手動下載。", "The update archive could not be extracted. Please download manually.")
+        case .verify:
+            return pick("更新檔案的簽章或公證驗證失敗，請改用手動下載。", "The update signature or notarization check failed. Please download manually.")
+        case .staging:
+            return pick("更新暫存區無法建立，請改用手動下載。", "The update staging area could not be created. Please download manually.")
+        case .helper:
+            return pick("更新安裝 helper 執行失敗，原版本未被取代；請改用手動下載。", "The update installer failed; the current version was kept. Please download manually.")
+        }
+    }
 }

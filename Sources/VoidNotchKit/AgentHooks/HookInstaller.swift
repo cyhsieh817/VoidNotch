@@ -110,12 +110,24 @@ public final class HookInstaller {
         // relay 是 Claude/Codex/Grok 共用的基礎設施：三家寫進 settings 的 hook 指令都指向
         // paths.installedRelay，故安裝前必須先把 relay 從 bundle 複製到位一次，否則 hook 執行時
         // 找不到腳本、整條路徑失效（pi 自帶擴充不需 relay）。
+        // 另：既有用戶 hook 狀態已 .installed 時，若 App 內 bundle 的 relay 內容更新過，
+        // 也必須重刷，否則永遠卡在舊版腳本。
         var relayError: String?
         let relayPending = adapters.contains { a in
             guard a.kind == .claude || a.kind == .codex else { return false }
             switch states[a.kind] { case .notInstalled, .conflict: return true; default: return false }
         }
-        if relayPending {
+        // bundled 不存在時不觸發「內容過期」重刷，避免無人需安裝時多報錯；
+        // 讀檔失敗視同不相等，強制走 apply 讓既有失敗語意接手。
+        let relayContentStale: Bool = {
+            guard fm.fileExists(atPath: paths.bundledRelay.path) else { return false }
+            guard fm.fileExists(atPath: paths.installedRelay.path) else { return true }
+            guard let bundled = try? Data(contentsOf: paths.bundledRelay),
+                  let installed = try? Data(contentsOf: paths.installedRelay)
+            else { return true }
+            return bundled != installed
+        }()
+        if relayPending || relayContentStale {
             do { try apply([.copyFile(from: paths.bundledRelay, to: paths.installedRelay)]) }
             catch { relayError = "relay 腳本複製失敗：\(error)" }
         }

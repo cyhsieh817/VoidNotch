@@ -28,7 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let systemMonitor = ObservableSystemMonitor()
     private let tokenStore = TokenStore(
         usageProvider: CodexBarTokenUsageProvider(),
-        accountManager: CodexBarTokenAccountManager())
+        accountManager: CodexBarTokenAccountManager(),
+        resilienceCache: UsageResilienceCache(),
+        dailyStore: TokenDailyStore())
     private let agentActivityStore = AgentActivityStore(activityProvider: PeonPingAgentActivityProvider())
     let launchdScheduleStore = LaunchdScheduleStore()
     private let updateCheckStore: UpdateCheckStore = {
@@ -83,8 +85,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var l10n: L10n { L10n(currentLanguage) }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        AgentBrokerCapabilities.announce()
-        republishBrokerCapabilities()
+        // Community 版本無授權子系統，能力宣告恆為免費層。
+        AgentBrokerCapabilities.announce(isPro: false)
         Task { await updateCheckStore.checkIfDue() }
 
         registerDefaultPreferences()
@@ -146,10 +148,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         gaugeController.applyEnabledState()
-    }
-
-    func republishBrokerCapabilities() {
-        AgentBrokerCapabilities.announce()
     }
 
     static func hookPromptDeferred() -> Bool {

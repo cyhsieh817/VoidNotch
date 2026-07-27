@@ -1,6 +1,8 @@
 import Foundation
 
-public struct ProviderUsageWindow: Identifiable, Sendable, Equatable {
+extension ProviderUsageWindowKind: Codable {}
+
+public struct ProviderUsageWindow: Identifiable, Sendable, Equatable, Codable {
     public let id: String
     public var title: String
     public var kind: ProviderUsageWindowKind
@@ -110,6 +112,8 @@ public struct ProviderUsage: Identifiable, Sendable, Equatable {
     public var accountEmail: String?
     public var accountPlan: String?
     public var cliVersion: String?
+    public var freshness: ProviderUsageFreshness
+    public var diagnosis: UsageFetchDiagnosis?
 
     public var id: String { provider.id }
     public var name: String { provider.displayName }
@@ -131,7 +135,9 @@ public struct ProviderUsage: Identifiable, Sendable, Equatable {
         strategyID: String? = nil,
         accountEmail: String? = nil,
         accountPlan: String? = nil,
-        cliVersion: String? = nil)
+        cliVersion: String? = nil,
+        freshness: ProviderUsageFreshness = .fresh,
+        diagnosis: UsageFetchDiagnosis? = nil)
     {
         self.provider = provider
         self.status = status
@@ -150,6 +156,8 @@ public struct ProviderUsage: Identifiable, Sendable, Equatable {
         self.accountEmail = accountEmail
         self.accountPlan = accountPlan
         self.cliVersion = cliVersion
+        self.freshness = freshness
+        self.diagnosis = diagnosis
     }
 
     public static func placeholder(for provider: TokenProviderKind) -> ProviderUsage {
@@ -199,15 +207,6 @@ public struct ProviderUsage: Identifiable, Sendable, Equatable {
         return status.label
     }
 
-    public var secondaryMetricText: String {
-        if let detailText {
-            return detailText
-        }
-        let month = last30DaysTokensText
-        let cost = Self.costText(last30DaysCostUSD, currencyCode: currencyCode)
-        return "30d \(month) / \(cost)"
-    }
-
     public var sessionTokensText: String {
         Self.tokenText(sessionTokens)
     }
@@ -245,6 +244,14 @@ public struct ProviderUsage: Identifiable, Sendable, Equatable {
         case .unavailable:
             return errorMessage ?? "No local records or provider session found"
         }
+    }
+
+    public func statusDetailText(now: Date) -> String {
+        let text = statusDetailText
+        guard !freshness.isFresh, let ageText = freshness.ageText(now: now) else {
+            return text
+        }
+        return "\(text) · last updated \(ageText)"
     }
 
     public var dataCoverageText: String {
@@ -294,6 +301,28 @@ public struct ProviderUsage: Identifiable, Sendable, Equatable {
             return "Shown intentionally so unsupported providers are not mistaken for zero usage."
         case .unavailable:
             return "Open the provider app or CLI once, then refresh VoidNotch."
+        }
+    }
+
+    public func providerActionHint(now: Date) -> String {
+        _ = now
+        guard let diagnosis else {
+            return providerActionHint
+        }
+
+        switch diagnosis.kind {
+        case .authentication:
+            return "Sign in to this provider again, then refresh."
+        case .rateLimited:
+            return "Rate limited by the provider. VoidNotch will retry automatically."
+        case .schemaDrift:
+            return "The provider changed its response format. Showing the last known values."
+        case .network:
+            return "Network unreachable. Showing the last known values."
+        case .noUsableData:
+            return "Open the provider app or CLI once, then refresh VoidNotch."
+        case .unsupported, .unknown:
+            return providerActionHint
         }
     }
 

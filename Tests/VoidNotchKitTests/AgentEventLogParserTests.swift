@@ -15,9 +15,8 @@ final class AgentEventLogParserTests: XCTestCase {
     }
 
     // pi 的 extension 直接寫 JSONL（不經 relay），request_id 是小寫。
-    // isAnswerable 只是「有沒有 inputRequest」的觀測旗標，不是 provider 是不是 claude；
-    // VoidNotch 本身不再代答，這裡純粹驗證解析層有沒有正確帶出 inputRequest。
-    func test_pi_input_request_carries_input_request() {
+    // 「能不能作答」的判準是有無 inputRequest，不是 provider 是不是 claude。
+    func test_pi_input_request_is_answerable() {
         let line = #"{"provider":"pi","status":"needsInput","input_request":{"request_id":"3b0bc78d-9846-4ca2-8289-9646d2319f39","questions":[{"question":"選一個","header":"決策","multiSelect":false,"options":[{"label":"甲","description":""}]}]}}"#
         let event = AgentEventLogParser.parseEventLine(line)
         XCTAssertEqual(event?.provider, .pi)
@@ -25,7 +24,7 @@ final class AgentEventLogParserTests: XCTestCase {
         XCTAssertEqual(event?.inputRequest?.questions.first?.options.first?.label, "甲")
     }
 
-    func test_event_without_input_request_has_no_input_request() {
+    func test_event_without_input_request_is_not_answerable() {
         let line = #"{"provider":"pi","status":"completed"}"#
         XCTAssertEqual(AgentEventLogParser.parseEventLine(line)?.isAnswerable, false)
     }

@@ -80,6 +80,23 @@ final class HermesHookAdapterTests: XCTestCase {
 }
 
 final class AgentConnectionDiagnosticsTests: XCTestCase {
+    func test_capability_follows_broker_capabilities_declaration() {
+        // 能力必須跟著 relay 讀的那份宣告走，不可各自維護
+        for provider in AgentActivityProviderKind.allCases {
+            let expected: AgentAnswerCapability =
+                AgentBrokerCapabilities.answerableProviders.contains(provider.rawValue)
+                ? .answerable : .notifyOnly
+            XCTAssertEqual(AgentConnectionDiagnostics.capability(for: provider), expected)
+        }
+    }
+
+    func test_hermes_is_notify_only_and_codex_is_answerable() {
+        XCTAssertEqual(AgentConnectionDiagnostics.capability(for: .hermes), .notifyOnly)
+        XCTAssertEqual(AgentConnectionDiagnostics.capability(for: .codex), .answerable)
+        XCTAssertEqual(AgentConnectionDiagnostics.capability(for: .claude), .answerable)
+        XCTAssertEqual(AgentConnectionDiagnostics.capability(for: .pi), .answerable)
+    }
+
     func test_absent_agents_are_hidden_from_the_panel() {
         let states = AgentConnectionDiagnostics.states(from: [
             .claude: .installed,
@@ -102,22 +119,23 @@ final class AgentConnectionDiagnosticsTests: XCTestCase {
 
     func test_detail_tells_you_what_to_do_next() {
         let l10n = L10n(.zhTW)
-        let notWired = AgentConnectionState(provider: .codex, hook: .notInstalled)
+        let notWired = AgentConnectionState(provider: .codex, hook: .notInstalled, capability: .answerable)
         XCTAssertTrue(notWired.detail(l10n).contains("接通"))
 
-        let hermes = AgentConnectionState(provider: .hermes, hook: .installed)
+        let hermes = AgentConnectionState(provider: .hermes, hook: .installed, capability: .notifyOnly)
         XCTAssertTrue(hermes.detail(l10n).contains("只顯示活動"), "要講明 hermes 不是壞了，是協定做不到")
     }
 
-    func test_detail_is_english_in_en_locale() {
+    func test_detail_and_label_are_english_in_en_locale() {
         let l10n = L10n(.en)
-        let notWired = AgentConnectionState(provider: .codex, hook: .notInstalled)
+        let notWired = AgentConnectionState(provider: .codex, hook: .notInstalled, capability: .answerable)
         XCTAssertFalse(notWired.detail(l10n).contains(where: { $0.isChineseCharacter }))
+        XCTAssertFalse(notWired.capability.label(l10n).contains(where: { $0.isChineseCharacter }))
 
-        let hermes = AgentConnectionState(provider: .hermes, hook: .installed)
+        let hermes = AgentConnectionState(provider: .hermes, hook: .installed, capability: .notifyOnly)
         XCTAssertFalse(hermes.detail(l10n).contains(where: { $0.isChineseCharacter }))
 
-        let conflict = AgentConnectionState(provider: .grok, hook: .conflict("not in allowlist"))
+        let conflict = AgentConnectionState(provider: .grok, hook: .conflict("not in allowlist"), capability: .notifyOnly)
         XCTAssertFalse(conflict.detail(l10n).contains(where: { $0.isChineseCharacter }))
     }
 }

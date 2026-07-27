@@ -36,8 +36,13 @@ struct SystemCompactView: View {
     @AppStorage(SystemMetricKind.preferenceKey(.temperature)) private var tempOn = true
 
     var body: some View {
-        let s = monitor.snapshot
-        let items = compactItems(from: s)
+        let items = compactItems(
+            cpu: monitor.cpu,
+            ram: monitor.ram,
+            disk: monitor.disk,
+            network: monitor.network,
+            battery: monitor.battery,
+            thermal: monitor.thermal)
         Group {
             if items.isEmpty {
                 metric("—", "cpu")
@@ -81,27 +86,34 @@ struct SystemCompactView: View {
         let icon: String
     }
 
-    private func compactItems(from s: SystemSnapshot) -> [CompactItem] {
+    private func compactItems(
+        cpu: CPULoad,
+        ram: RAMUsage,
+        disk: DiskUsage,
+        network: NetworkUsage,
+        battery: BatteryStatus,
+        thermal: ThermalSnapshot
+    ) -> [CompactItem] {
         // Touch AppStorage so toggles refresh the view.
         _ = (cpuOn, memOn, diskOn, netOn, batOn, tempOn)
         var items: [CompactItem] = []
         for kind in SystemMetricPreferences.enabledCompactMetrics() {
             switch kind {
             case .cpu:
-                items.append(CompactItem(id: kind.rawValue, text: "\(s.cpu.percent)", icon: kind.iconSystemName))
+                items.append(CompactItem(id: kind.rawValue, text: "\(cpu.percent)", icon: kind.iconSystemName))
             case .memory:
-                items.append(CompactItem(id: kind.rawValue, text: "\(s.ram.percent)", icon: kind.iconSystemName))
+                items.append(CompactItem(id: kind.rawValue, text: "\(ram.percent)", icon: kind.iconSystemName))
             case .disk:
-                items.append(CompactItem(id: kind.rawValue, text: "\(s.disk.usedPercent)", icon: kind.iconSystemName))
+                items.append(CompactItem(id: kind.rawValue, text: "\(disk.usedPercent)", icon: kind.iconSystemName))
             case .network:
-                items.append(CompactItem(id: kind.rawValue, text: s.network.compactDownText, icon: "arrow.down"))
+                items.append(CompactItem(id: kind.rawValue, text: network.compactDownText, icon: "arrow.down"))
             case .battery:
-                if s.battery.isPresent {
-                    let pct = s.battery.percent.map(String.init) ?? "—"
+                if battery.isPresent {
+                    let pct = battery.percent.map(String.init) ?? "—"
                     items.append(CompactItem(id: kind.rawValue, text: pct, icon: kind.iconSystemName))
                 }
             case .temperature:
-                if let t = s.thermal.cpu {
+                if let t = thermal.cpu {
                     items.append(CompactItem(id: kind.rawValue, text: "\(Int(t.rounded()))°", icon: kind.iconSystemName))
                 }
             default:
@@ -131,7 +143,6 @@ struct SystemCompactView: View {
 
 struct SystemExpandedView: View {
     let monitor: ObservableSystemMonitor
-    @AppStorage(AppLanguage.preferenceKey) private var languageRaw = AppLanguage.default.rawValue
     @AppStorage(SystemMetricKind.preferenceKey(.cpu)) private var cpuOn = true
     @AppStorage(SystemMetricKind.preferenceKey(.memory)) private var memOn = true
     @AppStorage(SystemMetricKind.preferenceKey(.disk)) private var diskOn = true
@@ -144,103 +155,40 @@ struct SystemExpandedView: View {
     @AppStorage(SystemMetricKind.preferenceKey(.gpu)) private var gpuOn = true
 
     var body: some View {
-        let s = monitor.snapshot
-        let l10n = L10n(rawValue: languageRaw)
         _ = (cpuOn, memOn, diskOn, netOn, batOn, tempOn, healthOn, hostOn, procOn, gpuOn)
 
         return VStack(alignment: .leading, spacing: 10) {
             if SystemMetricPreferences.isEnabled(.health) {
-                healthHeader(s.health, l10n: l10n)
+                SystemHealthHeader(monitor: monitor)
             }
 
             LazyVGrid(columns: [GridItem(.flexible(), alignment: .top), GridItem(.flexible(), alignment: .top)], spacing: 8) {
                 if SystemMetricPreferences.isEnabled(.cpu) {
-                    sectionCard(title: l10n.cpu, icon: "cpu", fillsRowHeight: true) {
-                        metricRow(l10n.usage, "\(s.cpu.percent)%")
-                        metricRow(l10n.loadAverage, String(format: "%.2f / %.2f / %.2f", s.cpu.load1, s.cpu.load5, s.cpu.load15))
-                        if let p = s.cpu.usagePCores, let e = s.cpu.usageECores {
-                            metricRow("P/E", "\(Int((p * 100).rounded()))% / \(Int((e * 100).rounded()))%")
-                        }
-                    }
+                    SystemCPUCard(monitor: monitor)
                 }
                 if SystemMetricPreferences.isEnabled(.memory) {
-                    sectionCard(title: l10n.memory, icon: "memorychip", fillsRowHeight: true) {
-                        metricRow(l10n.usage, "\(s.ram.percent)%")
-                        metricRow(l10n.used, "\(ByteFormat.gib(s.ram.used)) / \(ByteFormat.gib(s.ram.total))")
-                        metricRow(l10n.pressure, s.ram.pressure.label)
-                        metricRow(l10n.swap, ByteFormat.gib(s.ram.swap.used))
-                    }
+                    SystemMemoryCard(monitor: monitor)
                 }
                 if SystemMetricPreferences.isEnabled(.disk) {
-                    sectionCard(title: l10n.disk, icon: "internaldrive", fillsRowHeight: true) {
-                        metricRow(l10n.usage, "\(s.disk.usedPercent)%")
-                        metricRow(l10n.free, ByteFormat.gib(s.disk.freeBytes))
-                        metricRow(l10n.diskRead, NetworkUsage.rateText(s.diskIO.readMBps))
-                        metricRow(l10n.diskWrite, NetworkUsage.rateText(s.diskIO.writeMBps))
-                    }
+                    SystemDiskCard(monitor: monitor)
                 }
                 if SystemMetricPreferences.isEnabled(.network) {
-                    sectionCard(title: l10n.network, icon: "network", fillsRowHeight: true) {
-                        metricRow(l10n.interface, s.network.interface ?? "—")
-                        metricRow(l10n.download, "↓ \(NetworkUsage.rateText(s.network.rxMBps))")
-                        metricRow(l10n.upload, "↑ \(NetworkUsage.rateText(s.network.txMBps))")
-                    }
+                    SystemNetworkCard(monitor: monitor)
                 }
                 if SystemMetricPreferences.isEnabled(.battery) {
-                    sectionCard(title: l10n.power, icon: "battery.100", fillsRowHeight: true) {
-                        if s.battery.isPresent {
-                            metricRow(l10n.level, s.battery.percent.map { "\($0)%" } ?? "—")
-                            metricRow(l10n.status, s.battery.statusText)
-                            metricRow(l10n.cycles, s.battery.cycleCount.map(String.init) ?? "—")
-                            metricRow(l10n.health, s.battery.healthLabel ?? "—")
-                        } else {
-                            metricRow(l10n.status, "N/A")
-                        }
-                    }
+                    SystemPowerCard(monitor: monitor)
                 }
                 if SystemMetricPreferences.isEnabled(.temperature) || SystemMetricPreferences.isEnabled(.gpu) {
-                    sectionCard(title: l10n.thermalGPU, icon: "thermometer.medium", fillsRowHeight: true) {
-                        if SystemMetricPreferences.isEnabled(.temperature) {
-                            metricRow(l10n.cpuTemp, s.thermal.cpu.map { "\(Int($0.rounded()))°C" } ?? "—")
-                            metricRow(l10n.gpuTemp, s.thermal.gpu.map { "\(Int($0.rounded()))°C" } ?? "—")
-                        }
-                        if SystemMetricPreferences.isEnabled(.gpu) {
-                            metricRow(l10n.gpu, s.gpu.name ?? "—")
-                            metricRow(l10n.gpuUtil, s.gpu.usagePercent.map { "\(Int($0.rounded()))%" } ?? "—")
-                        }
-                    }
+                    SystemThermalGPUCard(monitor: monitor)
                 }
             }
 
             if SystemMetricPreferences.isEnabled(.host) {
-                sectionCard(title: l10n.host, icon: "desktopcomputer") {
-                    metricRow(l10n.model, s.host.model ?? "—")
-                    metricRow(l10n.chip, s.host.chip ?? "—")
-                    metricRow(l10n.uptime, s.host.uptimeText)
-                    metricRow(l10n.os, s.host.osVersion ?? "—")
-                }
+                SystemHostCard(monitor: monitor)
             }
 
             if SystemMetricPreferences.isEnabled(.processes) {
-                sectionCard(title: l10n.topProcesses, icon: "list.bullet") {
-                    if s.topProcesses.isEmpty {
-                        Text("—")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(s.topProcesses) { proc in
-                            HStack {
-                                Text(proc.name)
-                                    .lineLimit(1)
-                                Spacer()
-                                Text(String(format: "%.1f%%", proc.cpuPercent))
-                                    .monospacedDigit()
-                                    .fontWeight(.semibold)
-                            }
-                            .font(.system(size: 11))
-                        }
-                    }
-                }
+                SystemTopProcessesCard(monitor: monitor)
             }
         }
         .padding(.horizontal, 4)
@@ -248,7 +196,15 @@ struct SystemExpandedView: View {
         .frame(minWidth: 320, maxWidth: 420)
     }
 
-    private func healthHeader(_ health: HealthScore, l10n: L10n) -> some View {
+}
+
+private struct SystemHealthHeader: View {
+    let monitor: ObservableSystemMonitor
+    @AppStorage(AppLanguage.preferenceKey) private var languageRaw = AppLanguage.default.rawValue
+
+    var body: some View {
+        let health = monitor.health
+        let l10n = L10n(rawValue: languageRaw)
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Text(l10n.systemTitle).font(.headline)
@@ -258,7 +214,7 @@ struct SystemExpandedView: View {
                     .monospacedDigit()
                 Text(health.label)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(healthColor(health.score))
+                    .foregroundStyle(systemHealthColor(health.score))
             }
             if !health.issues.isEmpty {
                 Text(health.issues.joined(separator: " · "))
@@ -271,13 +227,165 @@ struct SystemExpandedView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
+}
 
-    private func sectionCard<Content: View>(
-        title: String,
-        icon: String,
-        fillsRowHeight: Bool = false,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
+private struct SystemCPUCard: View {
+    let monitor: ObservableSystemMonitor
+    @AppStorage(AppLanguage.preferenceKey) private var languageRaw = AppLanguage.default.rawValue
+
+    var body: some View {
+        let cpu = monitor.cpu
+        let l10n = L10n(rawValue: languageRaw)
+        systemSectionCard(title: l10n.cpu, icon: "cpu", fillsRowHeight: true) {
+            systemMetricRow(l10n.usage, "\(cpu.percent)%")
+            systemMetricRow(l10n.loadAverage, String(format: "%.2f / %.2f / %.2f", cpu.load1, cpu.load5, cpu.load15))
+            if let p = cpu.usagePCores, let e = cpu.usageECores {
+                systemMetricRow("P/E", "\(Int((p * 100).rounded()))% / \(Int((e * 100).rounded()))%")
+            }
+        }
+    }
+}
+
+private struct SystemMemoryCard: View {
+    let monitor: ObservableSystemMonitor
+    @AppStorage(AppLanguage.preferenceKey) private var languageRaw = AppLanguage.default.rawValue
+
+    var body: some View {
+        let ram = monitor.ram
+        let l10n = L10n(rawValue: languageRaw)
+        systemSectionCard(title: l10n.memory, icon: "memorychip", fillsRowHeight: true) {
+            systemMetricRow(l10n.usage, "\(ram.percent)%")
+            systemMetricRow(l10n.used, "\(ByteFormat.gib(ram.used)) / \(ByteFormat.gib(ram.total))")
+            systemMetricRow(l10n.pressure, ram.pressure.label)
+            systemMetricRow(l10n.swap, ByteFormat.gib(ram.swap.used))
+        }
+    }
+}
+
+private struct SystemDiskCard: View {
+    let monitor: ObservableSystemMonitor
+    @AppStorage(AppLanguage.preferenceKey) private var languageRaw = AppLanguage.default.rawValue
+
+    var body: some View {
+        let disk = monitor.disk
+        let diskIO = monitor.diskIO
+        let l10n = L10n(rawValue: languageRaw)
+        systemSectionCard(title: l10n.disk, icon: "internaldrive", fillsRowHeight: true) {
+            systemMetricRow(l10n.usage, "\(disk.usedPercent)%")
+            systemMetricRow(l10n.free, ByteFormat.gib(disk.freeBytes))
+            systemMetricRow(l10n.diskRead, NetworkUsage.rateText(diskIO.readMBps))
+            systemMetricRow(l10n.diskWrite, NetworkUsage.rateText(diskIO.writeMBps))
+        }
+    }
+}
+
+private struct SystemNetworkCard: View {
+    let monitor: ObservableSystemMonitor
+    @AppStorage(AppLanguage.preferenceKey) private var languageRaw = AppLanguage.default.rawValue
+
+    var body: some View {
+        let network = monitor.network
+        let l10n = L10n(rawValue: languageRaw)
+        systemSectionCard(title: l10n.network, icon: "network", fillsRowHeight: true) {
+            systemMetricRow(l10n.interface, network.interface ?? "—")
+            systemMetricRow(l10n.download, "↓ \(NetworkUsage.rateText(network.rxMBps))")
+            systemMetricRow(l10n.upload, "↑ \(NetworkUsage.rateText(network.txMBps))")
+        }
+    }
+}
+
+private struct SystemPowerCard: View {
+    let monitor: ObservableSystemMonitor
+    @AppStorage(AppLanguage.preferenceKey) private var languageRaw = AppLanguage.default.rawValue
+
+    var body: some View {
+        let battery = monitor.battery
+        let l10n = L10n(rawValue: languageRaw)
+        systemSectionCard(title: l10n.power, icon: "battery.100", fillsRowHeight: true) {
+            if battery.isPresent {
+                systemMetricRow(l10n.level, battery.percent.map { "\($0)%" } ?? "—")
+                systemMetricRow(l10n.status, battery.statusText)
+                systemMetricRow(l10n.cycles, battery.cycleCount.map(String.init) ?? "—")
+                systemMetricRow(l10n.health, battery.healthLabel ?? "—")
+            } else {
+                systemMetricRow(l10n.status, "N/A")
+            }
+        }
+    }
+}
+
+private struct SystemThermalGPUCard: View {
+    let monitor: ObservableSystemMonitor
+    @AppStorage(AppLanguage.preferenceKey) private var languageRaw = AppLanguage.default.rawValue
+
+    var body: some View {
+        let thermal = monitor.thermal
+        let gpu = monitor.gpu
+        let l10n = L10n(rawValue: languageRaw)
+        systemSectionCard(title: l10n.thermalGPU, icon: "thermometer.medium", fillsRowHeight: true) {
+            if SystemMetricPreferences.isEnabled(.temperature) {
+                systemMetricRow(l10n.cpuTemp, thermal.cpu.map { "\(Int($0.rounded()))°C" } ?? "—")
+                systemMetricRow(l10n.gpuTemp, thermal.gpu.map { "\(Int($0.rounded()))°C" } ?? "—")
+            }
+            if SystemMetricPreferences.isEnabled(.gpu) {
+                systemMetricRow(l10n.gpu, gpu.name ?? "—")
+                systemMetricRow(l10n.gpuUtil, gpu.usagePercent.map { "\(Int($0.rounded()))%" } ?? "—")
+            }
+        }
+    }
+}
+
+private struct SystemHostCard: View {
+    let monitor: ObservableSystemMonitor
+    @AppStorage(AppLanguage.preferenceKey) private var languageRaw = AppLanguage.default.rawValue
+
+    var body: some View {
+        let host = monitor.host
+        let l10n = L10n(rawValue: languageRaw)
+        systemSectionCard(title: l10n.host, icon: "desktopcomputer") {
+            systemMetricRow(l10n.model, host.model ?? "—")
+            systemMetricRow(l10n.chip, host.chip ?? "—")
+            systemMetricRow(l10n.uptime, host.uptimeText)
+            systemMetricRow(l10n.os, host.osVersion ?? "—")
+        }
+    }
+}
+
+private struct SystemTopProcessesCard: View {
+    let monitor: ObservableSystemMonitor
+    @AppStorage(AppLanguage.preferenceKey) private var languageRaw = AppLanguage.default.rawValue
+
+    var body: some View {
+        let topProcesses = monitor.topProcesses
+        let l10n = L10n(rawValue: languageRaw)
+        systemSectionCard(title: l10n.topProcesses, icon: "list.bullet") {
+            if topProcesses.isEmpty {
+                Text("—")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(topProcesses) { proc in
+                    HStack {
+                        Text(proc.name)
+                            .lineLimit(1)
+                        Spacer()
+                        Text(String(format: "%.1f%%", proc.cpuPercent))
+                            .monospacedDigit()
+                            .fontWeight(.semibold)
+                    }
+                    .font(.system(size: 11))
+                }
+            }
+        }
+    }
+}
+
+private func systemSectionCard<Content: View>(
+    title: String,
+    icon: String,
+    fillsRowHeight: Bool = false,
+    @ViewBuilder content: () -> Content
+) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Label(title, systemImage: icon)
                 .font(.system(size: 11, weight: .semibold))
@@ -290,9 +398,9 @@ struct SystemExpandedView: View {
             maxHeight: fillsRowHeight ? .infinity : nil,
             alignment: .topLeading)
         .background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
+}
 
-    private func metricRow(_ label: String, _ value: String) -> some View {
+private func systemMetricRow(_ label: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(label)
                 .font(.system(size: 11))
@@ -305,14 +413,13 @@ struct SystemExpandedView: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
         }
-    }
+}
 
-    private func healthColor(_ score: Int) -> Color {
-        switch score {
-        case 85...100: return .green
-        case 65..<85: return .mint
-        case 45..<65: return .orange
-        default: return .red
-        }
+private func systemHealthColor(_ score: Int) -> Color {
+    switch score {
+    case 85...100: return .green
+    case 65..<85: return .mint
+    case 45..<65: return .orange
+    default: return .red
     }
 }

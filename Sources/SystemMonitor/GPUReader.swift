@@ -14,6 +14,9 @@ public final class GPUReader: @unchecked Sendable {
     private var cachedCores: Int?
     private var cachedAt: Date?
     private let cacheTTL: TimeInterval = 120
+    // Apple Silicon 上 readUtilizationPercent 幾乎恆回 nil，連續失敗後退避 300 秒避免每次 IORegistry 列舉浪費。
+    private var utilizationFailureStreak = 0
+    private var utilizationSuppressedUntil: Date?
 
     public init() {}
 
@@ -33,10 +36,21 @@ public final class GPUReader: @unchecked Sendable {
         }
 
         // Attempt non-root utilization from IOAccelerator stats (often nil on modern AS).
-        if let pct = Self.readUtilizationPercent() {
+        // 連續失敗後進入 300 秒退避，期間不呼叫 readUtilizationPercent。
+        if let suppressedUntil = utilizationSuppressedUntil, now < suppressedUntil {
+            usage.usagePercent = nil
+            usage.isSupported = false
+        } else if let pct = Self.readUtilizationPercent() {
+            utilizationFailureStreak = 0
+            utilizationSuppressedUntil = nil
             usage.usagePercent = pct
             usage.isSupported = true
         } else {
+            utilizationFailureStreak += 1
+            if utilizationFailureStreak >= 3 {
+                utilizationSuppressedUntil = now.addingTimeInterval(300)
+                utilizationFailureStreak = 0
+            }
             usage.usagePercent = nil
             usage.isSupported = false
         }
@@ -84,7 +98,7 @@ public final class GPUReader: @unchecked Sendable {
         guard sysctlbyname("machdep.cpu.brand_string", &buf, &size, nil, 0) == 0 else {
             return "Apple GPU"
         }
-        let brand = String(cString: buf)
+        let brand = decodeCString(buf)
         // "Apple M4 Pro" → treat as GPU name family.
         return brand.isEmpty ? "Apple GPU" : brand
     }

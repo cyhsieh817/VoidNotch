@@ -9,11 +9,13 @@ public struct AppUpdateInfo: Sendable, Equatable, Codable {
     public var version: String
     public var url: String
     public var notes: String?
+    public var sha256: String?
 
-    public init(version: String, url: String, notes: String? = nil) {
+    public init(version: String, url: String, notes: String? = nil, sha256: String? = nil) {
         self.version = version
         self.url = url
         self.notes = notes
+        self.sha256 = sha256
     }
 }
 

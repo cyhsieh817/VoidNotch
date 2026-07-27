@@ -2,21 +2,17 @@ import XCTest
 @testable import VoidNotchKit
 
 final class NotchCompactLayoutStoreTests: XCTestCase {
-    private var suiteName: String!
     private var defaults: UserDefaults!
     private var store: NotchCompactLayoutStore!
 
     override func setUp() {
-        suiteName = "VoidNotch.Tests.NotchCompactLayoutStore.\(UUID().uuidString)"
-        defaults = UserDefaults(suiteName: suiteName)!
+        defaults = makeTestDefaults("NotchCompactLayoutStore")
         store = NotchCompactLayoutStore(defaults: defaults)
     }
 
     override func tearDown() {
-        defaults.removePersistentDomain(forName: suiteName)
         defaults = nil
         store = nil
-        suiteName = nil
     }
 
     func test_preferredSide_defaults_when_empty() {

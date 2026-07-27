@@ -23,12 +23,15 @@ public final class NotchShell {
     private let openSettings: (@MainActor () -> Void)?
     private let onActivityLevelChange: (@MainActor (MonitorActivityLevel) -> Void)?
     private let onSpeechStart: (@MainActor () -> Void)?
+    private let isProProvider: @MainActor @Sendable () -> Bool
     private var notch: DynamicNotch<AnyView, AnyView, AnyView>?
     private var autoPresentationTask: Task<Void, Never>?
     private var agentAlertTask: Task<Void, Never>?
+    private var agentAlertCollapseTask: Task<Void, Never>?
     private var agentAlertGeneration: UInt64 = 0
     private let agentAlertState = NotchAgentAlertState()
     private let optionSpeechRecognizer = AgentOptionSpeechRecognizer()
+    private let proUpsellState = NotchProUpsellState()
     private var hookBannerTask: Task<Void, Never>?
     private var hookBannerGeneration: UInt64 = 0
     private let hookBannerState = NotchHookBannerState()
@@ -43,28 +46,38 @@ public final class NotchShell {
     private var leadingContentWidth: CGFloat = 116
     private var mouseOverNotchArea = false
     private var agentAlertFrame: CGRect?
+    /// 已彈出、但使用者尚未作答的問答請求。relay 正在另一端等它，收掉卡片前必須先放行。
+    private var pendingInputRequest: AgentInputRequest?
+    /// 待答卡 FIFO；只存已通過 Pro gate 且 request_id 尚未處理的請求。
+    private var queuedInputEvents: [AgentActivityEvent] = []
+    private var queuedInputRequestIDs = Set<UUID>()
 
     /// 一般提醒卡的生命週期；同一時間只允許一張卡片可見。
     private static let standardAgentAlertLifetime: TimeInterval = 30
+    /// 問答卡的存活期，且必須明顯短於 relay 的 broker timeout（590 秒），
+    /// 逾時才來得及送出 dismissal 讓 agent 回終端機提問。
+    private static let inputRequestAlertLifetime: TimeInterval = 300
 
     public init(registry: WidgetRegistry,
                 openSettings: (@MainActor () -> Void)? = nil,
                 onActivityLevelChange: (@MainActor (MonitorActivityLevel) -> Void)? = nil,
-                onSpeechStart: (@MainActor () -> Void)? = nil) {
+                onSpeechStart: (@MainActor () -> Void)? = nil,
+                isProProvider: @escaping @MainActor @Sendable () -> Bool = { false }) {
         self.registry = registry
         self.openSettings = openSettings
         self.onActivityLevelChange = onActivityLevelChange
         self.onSpeechStart = onSpeechStart
+        self.isProProvider = isProProvider
     }
 
     /// 建立瀏海面板。收合時依使用者設定顯示左側/右側，縮起側不在實體瀏海外側殘留。
     public func start() async {
-        AgentBrokerCapabilities.announce()
+        AgentBrokerCapabilities.announce(isPro: isProProvider())
 
         let notch = DynamicNotch<AnyView, AnyView, AnyView>(
             hoverBehavior: [.keepVisible, .increaseShadow], // 展開期間 hover 不消失（spike §1）
             style: .auto,
-            expanded: { [registry, agentAlertState, hookBannerState, optionSpeechRecognizer, onSpeechStart, weak self] in
+            expanded: { [registry, agentAlertState, proUpsellState, hookBannerState, optionSpeechRecognizer, onSpeechStart, weak self] in
                 let screen = self?.activeScreen() ?? NSScreen.main ?? NSScreen()
                 let menuBar = self?.menuBarHeight(on: screen) ?? 37
                 let topInset = NotchMetrics.expandedTopInset(menuBarHeight: menuBar)
@@ -73,6 +86,7 @@ public final class NotchShell {
                     NotchExpandedContent(
                         registry: registry,
                         agentAlertState: agentAlertState,
+                        proUpsellState: proUpsellState,
                         hookBannerState: hookBannerState,
                         topInset: topInset,
                         scrollMaxHeight: scrollMaxH,
@@ -144,29 +158,110 @@ public final class NotchShell {
     public func expand() async { await transition(to: .expanded) }
     public func compact() async { await transition(to: .compact) }
     public func hide() async { await transition(to: .hidden) }
-    /// inputRequest 事件一律降為一般提醒顯示——VoidNotch 不再代答，
-    /// 送出去之前先把 inputRequest 清掉，讓它走一般提醒的展示與生命週期。
     public func presentAgentAlert(_ event: AgentActivityEvent) {
-        var notifyOnlyEvent = event
-        notifyOnlyEvent.inputRequest = nil
-        presentOrdinaryAgentAlert(notifyOnlyEvent)
+        if let inputRequest = event.inputRequest, !isProProvider() {
+            // Community／空 capabilities 不可代答；只放行這一筆，不讓它變成可作答 UI。
+            try? AgentInputResponseWriter.dismiss(request: inputRequest)
+            guard pendingInputRequest == nil else { return }
+            var notifyOnlyEvent = event
+            notifyOnlyEvent.inputRequest = nil
+            presentOrdinaryAgentAlert(notifyOnlyEvent, showProUpsell: true)
+            return
+        }
+
+        if let inputRequest = event.inputRequest {
+            guard !isKnownInputRequest(inputRequest.requestID) else { return }
+            if pendingInputRequest != nil || agentAlertState.event?.inputRequest != nil {
+                queuedInputEvents.append(event)
+                queuedInputRequestIDs.insert(inputRequest.requestID)
+                return
+            }
+            // 可作答卡片是最高優先級，立即取代任何一般提醒。
+            proUpsellState.isVisible = false
+            displayAgentAlert(event)
+            return
+        }
+
+        presentOrdinaryAgentAlert(event)
     }
 
-    private func presentOrdinaryAgentAlert(_ event: AgentActivityEvent) {
+    private func presentOrdinaryAgentAlert(
+        _ event: AgentActivityEvent,
+        showProUpsell: Bool = false)
+    {
+        // 待答卡是使用者互動狀態；普通提醒只能留在活動紀錄，不得覆蓋或 dismiss 它。
+        guard pendingInputRequest == nil else { return }
         if let current = agentAlertState.event {
-            guard event.status.alertPriority > current.status.alertPriority else { return }
+            guard current.inputRequest == nil,
+                  event.status.alertPriority > current.status.alertPriority
+            else { return }
         }
+        proUpsellState.isVisible = showProUpsell
         displayAgentAlert(event)
     }
 
     private func displayAgentAlert(_ event: AgentActivityEvent) {
+        agentAlertCollapseTask?.cancel()
+        agentAlertCollapseTask = nil
         agentAlertTask?.cancel()
         agentAlertTask = nil
         agentAlertGeneration &+= 1
         let generation = agentAlertGeneration
-        let deadline = Date().addingTimeInterval(Self.standardAgentAlertLifetime)
+        let now = Date()
+        let answerableInputRequest = event.inputRequest
+        let deadline: Date
+        if let answerableInputRequest {
+            // 問答卡不與一般 30 秒提醒共用生命週期；relay 仍在另一端等待答案，給它自己的存活期。
+            deadline = now.addingTimeInterval(Self.inputRequestAlertLifetime)
+            pendingInputRequest = answerableInputRequest
+            // 人不在螢幕前會直接錯過瀏海卡片；鏡射一則系統通知（受偏好開關與授權狀態閘門，內容只含
+            // provider 與 title／header 摘要，見 AgentAlertNotificationMirror 的隱私邊界註解）。
+            AgentAlertNotificationMirror.shared.postInputRequestNotification(
+                provider: event.provider.displayName,
+                title: event.title,
+                questionSummary: answerableInputRequest.questions.first?.header)
+        } else {
+            deadline = now.addingTimeInterval(Self.standardAgentAlertLifetime)
+        }
         agentAlertState.event = event
-        agentAlertState.submit = nil
+        if answerableInputRequest != nil {
+            let navigationTarget = event.navigation
+            agentAlertState.submit = { [weak self, navigationTarget] request, selections in
+                guard let self else { return nil }
+                // 第二道獨立驗簽點（使用時重驗）：卡片顯示期間授權可能已過期／被撤銷，
+                // 寫出答案前必須再驗一次，不能只信賴 presentAgentAlert 入口那道判斷
+                // （卡片可能已停留數分鐘，期間 trial/簽章可能過期）。
+                guard self.isProProvider() else {
+                    try? AgentInputResponseWriter.dismiss(request: request)
+                    guard self.pendingInputRequest?.requestID == request.requestID else { return nil }
+                    let sourceEvent = self.agentAlertState.event
+                    self.pendingInputRequest = nil
+                    self.finishCurrentAgentAlert(releaseCurrentInput: false)
+                    if var notifyOnlyEvent = sourceEvent {
+                        notifyOnlyEvent.inputRequest = nil
+                        self.presentOrdinaryAgentAlert(notifyOnlyEvent, showProUpsell: true)
+                    }
+                    return nil
+                }
+                do {
+                    try AgentInputResponseWriter.write(request: request, selections: selections)
+                    // 答案已送出，dismissal 不可再覆寫這個檔案。
+                    guard self.agentAlertGeneration == generation,
+                          self.pendingInputRequest?.requestID == request.requestID
+                    else { return nil }
+                    self.pendingInputRequest = nil
+                    self.finishCurrentAgentAlert(releaseCurrentInput: false)
+                    if let navigationTarget, navigationTarget.isActionable {
+                        AgentActivityNavigation.open(navigationTarget)
+                    }
+                    return nil
+                } catch {
+                    return error.localizedDescription
+                }
+            }
+        } else {
+            agentAlertState.submit = nil
+        }
 
         agentAlertTask = Task { [weak self] in
             guard let self else { return }
@@ -177,6 +272,12 @@ public final class NotchShell {
                 return
             }
             guard !Task.isCancelled, self.agentAlertGeneration == generation else { return }
+            // 走到這裡代表這顆 task 沒被 cancel、generation 沒被 bump：使用者手動作答（submit）
+            // 或手動關閉（dismissAgentAlert）都會在事發當下 cancel 掉這顆 task，能撐過 sleep
+            // 撐到這裡的只有「逾時未作答」一種情形，才鏡射「已放行回終端機」通知。
+            if answerableInputRequest != nil {
+                AgentAlertNotificationMirror.shared.postReleasedNotification(provider: event.provider.displayName)
+            }
             if self.hookBannerState.content != nil {
                 self.finishAgentAlertIfCurrent(generation: generation)
                 return
@@ -186,28 +287,89 @@ public final class NotchShell {
         }
     }
 
-    private func finishAgentAlertIfCurrent(generation: UInt64) {
-        guard agentAlertGeneration == generation else { return }
-        finishCurrentAgentAlert()
+    private func isKnownInputRequest(_ requestID: UUID) -> Bool {
+        pendingInputRequest?.requestID == requestID
+            || queuedInputRequestIDs.contains(requestID)
     }
 
-    private func finishCurrentAgentAlert() {
+    private func finishAgentAlertIfCurrent(generation: UInt64) {
+        guard agentAlertGeneration == generation else { return }
+        finishCurrentAgentAlert(releaseCurrentInput: true)
+    }
+
+    private func finishCurrentAgentAlert(releaseCurrentInput: Bool) {
+        agentAlertCollapseTask?.cancel()
+        agentAlertCollapseTask = nil
         agentAlertTask?.cancel()
         agentAlertTask = nil
+        if releaseCurrentInput { releasePendingInputRequest() }
+        else { pendingInputRequest = nil }
         agentAlertGeneration &+= 1
 
-        agentAlertState.event = nil
-        agentAlertState.submit = nil
+        if let next = queuedInputEvents.first {
+            queuedInputEvents.removeFirst()
+            if let requestID = next.inputRequest?.requestID {
+                queuedInputRequestIDs.remove(requestID)
+            }
+            proUpsellState.isVisible = false
+            displayAgentAlert(next)
+            return
+        }
+
+        let finishingEventID = agentAlertState.event?.id
+        let collapseGeneration = agentAlertGeneration
+        // 收合動畫期間仍保留 event 供畫面渲染，但先切斷送出入口，避免重複回答。
+        agentAlertState.submit = { _, _ in nil }
+        proUpsellState.isVisible = false
         agentAlertFrame = nil
-        Task { [weak self] in
+        agentAlertCollapseTask = Task { [weak self] in
             guard let self else { return }
+            defer {
+                if self.agentAlertGeneration == collapseGeneration,
+                   self.agentAlertState.event?.id == finishingEventID
+                {
+                    self.agentAlertState.event = nil
+                    self.agentAlertState.submit = nil
+                    self.agentAlertCollapseTask = nil
+                }
+            }
             guard self.hookBannerState.content == nil else { return }
             await self.transition(to: .compact)
+            guard !Task.isCancelled,
+                  self.agentAlertGeneration == collapseGeneration,
+                  self.agentAlertState.event?.id == finishingEventID
+            else { return }
+
+            if let next = self.queuedInputEvents.first {
+                self.queuedInputEvents.removeFirst()
+                if let requestID = next.inputRequest?.requestID {
+                    self.queuedInputRequestIDs.remove(requestID)
+                }
+                self.agentAlertState.event = nil
+                self.agentAlertState.submit = nil
+                self.agentAlertCollapseTask = nil
+                self.proUpsellState.isVisible = false
+                self.displayAgentAlert(next)
+                return
+            }
+
+            self.agentAlertState.event = nil
+            self.agentAlertState.submit = nil
+            self.agentAlertCollapseTask = nil
+            // 收合期間可能新出現 hook banner；清掉自己的卡片後交還互斥顯示權。
+            guard self.hookBannerState.content == nil else { return }
         }
     }
 
+    /// 卡片收掉但沒作答時，通知 relay 放棄接管，讓 agent 立刻回終端機提問。冪等。
+    private func releasePendingInputRequest() {
+        guard let request = pendingInputRequest else { return }
+        pendingInputRequest = nil
+        try? AgentInputResponseWriter.dismiss(request: request)
+    }
+
     private func dismissAgentAlert() {
-        finishCurrentAgentAlert()
+        finishCurrentAgentAlert(releaseCurrentInput: true)
     }
 
     /// 首啟一鍵接線提示列：「⚡ 可接管 N 個 agent…[啟用][稍後]」。持續展開直到使用者按下其中一個按鈕
@@ -292,11 +454,20 @@ public final class NotchShell {
     public func stop() {
         autoPresentationTask?.cancel()
         autoPresentationTask = nil
+        agentAlertCollapseTask?.cancel()
+        agentAlertCollapseTask = nil
         agentAlertTask?.cancel()
         agentAlertTask = nil
         optionSpeechRecognizer.cancel()
+        releasePendingInputRequest()
+        for event in queuedInputEvents {
+            if let request = event.inputRequest { try? AgentInputResponseWriter.dismiss(request: request) }
+        }
+        queuedInputEvents.removeAll()
+        queuedInputRequestIDs.removeAll()
         agentAlertState.event = nil
         agentAlertState.submit = nil
+        proUpsellState.isVisible = false
         agentAlertFrame = nil
         hookBannerTask?.cancel()
         hookBannerTask = nil
@@ -463,27 +634,20 @@ public final class NotchShell {
         return !Task.isCancelled && hookBannerGeneration == generation
     }
 
+    // mouseMoved 已由 autoPresentationTask 的 140ms 輪詢取代，避免每事件 actor hop。
     private func installMouseMonitors() {
         removeMouseMonitors()
 
-        localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .mouseMoved]) { [weak self] event in
+        localMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             Task { @MainActor [weak self] in
-                if event.type == .mouseMoved {
-                    self?.updateClickThrough()
-                } else {
-                    self?.handleMouseDown(event)
-                }
+                self?.handleMouseDown(event)
             }
             return event
         }
 
-        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .mouseMoved]) { [weak self] event in
+        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             Task { @MainActor [weak self] in
-                if event.type == .mouseMoved {
-                    self?.updateClickThrough()
-                } else {
-                    self?.handleMouseDown(event)
-                }
+                self?.handleMouseDown(event)
             }
         }
     }
@@ -531,6 +695,7 @@ public final class NotchShell {
 private struct NotchExpandedContent: View {
     let registry: WidgetRegistry
     @Bindable var agentAlertState: NotchAgentAlertState
+    @Bindable var proUpsellState: NotchProUpsellState
     @Bindable var hookBannerState: NotchHookBannerState
     let topInset: CGFloat
     let scrollMaxHeight: CGFloat
@@ -549,6 +714,15 @@ private struct NotchExpandedContent: View {
                         speechRecognizer: speechRecognizer,
                         onSpeechStart: onSpeechStart,
                         onFrameChange: onAgentAlertFrameChange)
+                    if proUpsellState.isVisible {
+                        Button(Self.currentL10n.proUpsellAnswerInNotch) {
+                            NSWorkspace.shared.open(VoidNotchLinks.site)
+                        }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.yellow)
+                            .font(.system(size: 12, weight: .semibold))
+                            .padding(.bottom, 14)
+                    }
                 }
                 .background {
                     NotchAlertContainerBoundsObserver(onFrameChange: onAgentAlertFrameChange)
@@ -565,6 +739,15 @@ private struct NotchExpandedContent: View {
         }
     }
 
+    private static var currentL10n: L10n {
+        L10n(AppLanguage.resolve(UserDefaults.standard.string(forKey: AppLanguage.preferenceKey)))
+    }
+}
+
+@MainActor
+@Observable
+private final class NotchProUpsellState {
+    var isVisible = false
 }
 
 private struct NotchAlertContainerBoundsObserver: NSViewRepresentable {

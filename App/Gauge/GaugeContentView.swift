@@ -12,7 +12,7 @@ struct GaugeContentView: View {
         TimelineView(.periodic(from: .now, by: TokenStore.compactRotationInterval)) { timeline in
             let items = DisplaySelectionStore.items(for: .gauge)
             let readings = DisplayReadings.make(
-                items: items, snapshot: systemMonitor.snapshot,
+                items: items, monitor: systemMonitor,
                 tokenStore: tokenStore, agentStore: agentStore, at: timeline.date)
             let base = GaugeMetrics.baseSize(itemCount: items.count)
             let clampedScale = CGFloat(min(max(scale, 0.5), 2.0))

@@ -191,6 +191,16 @@ private struct AgentConnectionRow: View {
                 .font(.caption.weight(.medium))
                 .frame(width: 60, alignment: .leading)
 
+            // 「只通知」不是故障，是那家 agent 的協定就回不了答案。講明白，免得被當成 bug。
+            Text(state.capability.label(l10n))
+                .font(.caption2)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(
+                    (state.capability == .answerable ? Color.blue : Color.gray).opacity(0.18),
+                    in: Capsule())
+                .foregroundStyle(state.capability == .answerable ? .blue : .secondary)
+
             Text(state.detail(l10n))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -375,7 +385,7 @@ enum AgentActivityNavigation {
         if let running = NSRunningApplication.runningApplications(
             withBundleIdentifier: application.bundleIdentifier).first
         {
-            running.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+            running.activate(options: [.activateAllWindows])
             return
         }
 

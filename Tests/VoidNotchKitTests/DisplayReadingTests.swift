@@ -6,9 +6,9 @@ final class DisplayReadingTests: XCTestCase {
     private func snapshot() -> SystemSnapshot {
         var cpu = CPULoad(); cpu.total = 0.42
         var ram = RAMUsage(); ram.total = 100; ram.free = 32   // usage 0.68 → 68%
-        var thermal = ThermalSnapshot(cpu: 54.4)
-        var health = HealthScore(score: 88, label: "Good")
-        var snap = SystemSnapshot(cpu: cpu, ram: ram, thermal: thermal, health: health)
+        let thermal = ThermalSnapshot(cpu: 54.4)
+        let health = HealthScore(score: 88, label: "Good")
+        let snap = SystemSnapshot(cpu: cpu, ram: ram, thermal: thermal, health: health)
         return snap
     }
 

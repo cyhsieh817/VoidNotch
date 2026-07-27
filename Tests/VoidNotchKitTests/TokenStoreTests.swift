@@ -4,7 +4,7 @@ import XCTest
 @MainActor
 final class TokenStoreTests: XCTestCase {
     private func freshDefaults() -> UserDefaults {
-        UserDefaults(suiteName: "test.voidnotch.token.\(UUID().uuidString)")!
+        makeTestDefaults("TokenStore")
     }
 
     func test_default_providers_when_empty() {

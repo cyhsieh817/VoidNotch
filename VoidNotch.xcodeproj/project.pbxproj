@@ -61,10 +61,18 @@
 		100000000000000000001105 /* NotchPresentationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001205 /* NotchPresentationState.swift */; };
 		100000000000000000001106 /* ProviderTokenAccountMetadataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001206 /* ProviderTokenAccountMetadataStore.swift */; };
 		100000000000000000001107 /* AntigravityAccountCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001207 /* AntigravityAccountCodec.swift */; };
+		100000000000000000001115 /* UpdateSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001215 /* UpdateSettingsView.swift */; };
 		100000000000000000001109 /* AlertSoundSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001209 /* AlertSoundSettingsView.swift */; };
 		100000000000000000001110 /* SettingsMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001211 /* SettingsMetrics.swift */; };
 			100000000000000000001112 /* AgentSpeechSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001212 /* AgentSpeechSettingsView.swift */; };
 			100000000000000000001113 /* AgentOptionSpeechRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001213 /* AgentOptionSpeechRecognizer.swift */; };
+			100000000000000000001114 /* SelfUpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100000000000000000001214 /* SelfUpdateController.swift */; };
+		200000000000000000000101 /* AgentAlertNotificationMirror.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000201 /* AgentAlertNotificationMirror.swift */; };
+		200000000000000000000102 /* LaunchdScheduleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000202 /* LaunchdScheduleStore.swift */; };
+		200000000000000000000103 /* UpdateCheckStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000203 /* UpdateCheckStore.swift */; };
+		200000000000000000000104 /* AntigravityOAuthLoginController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000204 /* AntigravityOAuthLoginController.swift */; };
+		200000000000000000000105 /* AgentAlertCardSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000205 /* AgentAlertCardSettingsView.swift */; };
+		200000000000000000000106 /* LaunchdScheduleWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000206 /* LaunchdScheduleWidget.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -123,10 +131,18 @@
 		100000000000000000001205 /* NotchPresentationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchPresentationState.swift; sourceTree = "<group>"; };
 		100000000000000000001206 /* ProviderTokenAccountMetadataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderTokenAccountMetadataStore.swift; sourceTree = "<group>"; };
 		100000000000000000001207 /* AntigravityAccountCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityAccountCodec.swift; sourceTree = "<group>"; };
+		100000000000000000001215 /* UpdateSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateSettingsView.swift; sourceTree = "<group>"; };
 		100000000000000000001209 /* AlertSoundSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertSoundSettingsView.swift; sourceTree = "<group>"; };
 		100000000000000000001211 /* SettingsMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsMetrics.swift; sourceTree = "<group>"; };
 			100000000000000000001212 /* AgentSpeechSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSpeechSettingsView.swift; sourceTree = "<group>"; };
 			100000000000000000001213 /* AgentOptionSpeechRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentOptionSpeechRecognizer.swift; sourceTree = "<group>"; };
+			100000000000000000001214 /* SelfUpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfUpdateController.swift; sourceTree = "<group>"; };
+		200000000000000000000201 /* AgentAlertNotificationMirror.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentAlertNotificationMirror.swift; sourceTree = "<group>"; };
+		200000000000000000000202 /* LaunchdScheduleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchdScheduleStore.swift; sourceTree = "<group>"; };
+		200000000000000000000203 /* UpdateCheckStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateCheckStore.swift; sourceTree = "<group>"; };
+		200000000000000000000204 /* AntigravityOAuthLoginController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AntigravityOAuthLoginController.swift; sourceTree = "<group>"; };
+		200000000000000000000205 /* AgentAlertCardSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentAlertCardSettingsView.swift; sourceTree = "<group>"; };
+		200000000000000000000206 /* LaunchdScheduleWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchdScheduleWidget.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -180,6 +196,10 @@
 				100000000000000000000203 /* TokenStore.swift */,
 				100000000000000000000215 /* CodexBarTokenUsageProvider.swift */,
 				100000000000000000000224 /* CodexBarTokenAccountManager.swift */,
+				100000000000000000001214 /* SelfUpdateController.swift */,
+				200000000000000000000201 /* AgentAlertNotificationMirror.swift */,
+				200000000000000000000202 /* LaunchdScheduleStore.swift */,
+				200000000000000000000203 /* UpdateCheckStore.swift */,
 				100000000000000000001210 /* TokenAccounts */,
 			);
 			path = Monitors;
@@ -204,6 +224,7 @@
 			children = (
 				100000000000000000001206 /* ProviderTokenAccountMetadataStore.swift */,
 				100000000000000000001207 /* AntigravityAccountCodec.swift */,
+				200000000000000000000204 /* AntigravityOAuthLoginController.swift */,
 			);
 			path = TokenAccounts;
 			sourceTree = "<group>";
@@ -216,6 +237,7 @@
 				100000000000000000000207 /* SystemWidget.swift */,
 				100000000000000000000208 /* TokenWidget.swift */,
 				100000000000000000000218 /* AgentActivityWidget.swift */,
+				200000000000000000000206 /* LaunchdScheduleWidget.swift */,
 			);
 			path = Widgets;
 			sourceTree = "<group>";
@@ -270,6 +292,7 @@
 			children = (
 				100000000000000000000216 /* ProviderSettingsView.swift */,
 				100000000000000000001211 /* SettingsMetrics.swift */,
+				100000000000000000001215 /* UpdateSettingsView.swift */,
 				100000000000000000001026 /* Alerts */,
 				100000000000000000000233 /* DisplayItemsEditor.swift */,
 				100000000000000000000234 /* GaugeSettingsRow.swift */,
@@ -289,6 +312,7 @@
 			children = (
 				100000000000000000001209 /* AlertSoundSettingsView.swift */,
 				100000000000000000001212 /* AgentSpeechSettingsView.swift */,
+				200000000000000000000205 /* AgentAlertCardSettingsView.swift */,
 			);
 			path = Alerts;
 			sourceTree = "<group>";
@@ -480,10 +504,18 @@
 				100000000000000000001105 /* NotchPresentationState.swift in Sources */,
 				100000000000000000001106 /* ProviderTokenAccountMetadataStore.swift in Sources */,
 				100000000000000000001107 /* AntigravityAccountCodec.swift in Sources */,
+				100000000000000000001115 /* UpdateSettingsView.swift in Sources */,
 				100000000000000000001109 /* AlertSoundSettingsView.swift in Sources */,
 				100000000000000000001110 /* SettingsMetrics.swift in Sources */,
 					100000000000000000001112 /* AgentSpeechSettingsView.swift in Sources */,
 					100000000000000000001113 /* AgentOptionSpeechRecognizer.swift in Sources */,
+					100000000000000000001114 /* SelfUpdateController.swift in Sources */,
+					200000000000000000000101 /* AgentAlertNotificationMirror.swift in Sources */,
+					200000000000000000000102 /* LaunchdScheduleStore.swift in Sources */,
+					200000000000000000000103 /* UpdateCheckStore.swift in Sources */,
+					200000000000000000000104 /* AntigravityOAuthLoginController.swift in Sources */,
+					200000000000000000000105 /* AgentAlertCardSettingsView.swift in Sources */,
+					200000000000000000000106 /* LaunchdScheduleWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

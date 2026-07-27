@@ -82,7 +82,7 @@ struct MenubarSummaryView: View {
         TimelineView(.periodic(from: .now, by: TokenStore.compactRotationInterval)) { timeline in
             let items = DisplaySelectionStore.items(for: .menubar)
             let readings = DisplayReadings.make(
-                items: items, snapshot: systemMonitor.snapshot,
+                items: items, monitor: systemMonitor,
                 tokenStore: tokenStore, agentStore: agentStore, at: timeline.date)
             HStack(spacing: 6) {
                 ForEach(Array(zip(items, readings).enumerated()), id: \.offset) { _, pair in

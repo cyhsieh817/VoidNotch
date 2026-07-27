@@ -3,23 +3,20 @@ import XCTest
 @testable import VoidNotchKit
 
 final class AlertSoundPreferencesTests: XCTestCase {
-    private var suiteName: String!
     private var defaults: UserDefaults!
     private var tempDirectory: URL!
     private var preferences: AlertSoundPreferences!
 
     override func setUpWithError() throws {
-        suiteName = "VoidNotch.AlertSoundPreferencesTests.\(UUID().uuidString)"
-        defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defaults.removePersistentDomain(forName: suiteName)
+        defaults = makeTestDefaults("AlertSoundPreferences")
+        // 暫存目錄仍須唯一，避免不同測試共用同一個目錄
         tempDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(suiteName, isDirectory: true)
+            .appendingPathComponent("VoidNotch.AlertSoundPreferencesTests.\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
         preferences = AlertSoundPreferences(userDefaults: defaults)
     }
 
     override func tearDownWithError() throws {
-        defaults.removePersistentDomain(forName: suiteName)
         try? FileManager.default.removeItem(at: tempDirectory)
     }
 

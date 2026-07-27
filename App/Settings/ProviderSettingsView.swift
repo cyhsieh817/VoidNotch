@@ -58,36 +58,22 @@ struct ProviderSettingsView: View {
 
     private var l10n: L10n { L10n(rawValue: languageRaw) }
 
-    private static let relativeDateFormatter: RelativeDateTimeFormatter = {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter
-    }()
-
-    private var relativeLastChecked: String? {
-        guard let lastCheckedAt = updateCheckStore.lastCheckedAt else { return nil }
-        Self.relativeDateFormatter.locale = l10n.language == .zhTW
-            ? Locale(identifier: "zh_TW")
-            : Locale(identifier: "en_US")
-        return Self.relativeDateFormatter.localizedString(for: lastCheckedAt, relativeTo: Date())
-    }
-
     private enum SettingsTab: String, CaseIterable, Identifiable {
         case layout
-        case system
         case scheduled
         case providers
         case alerts
+        case updates
 
         var id: String { rawValue }
 
         func title(l10n: L10n) -> String {
             switch self {
             case .layout: return l10n.settingsTabLayout
-            case .system: return l10n.settingsTabSystem
             case .scheduled: return l10n.settingsTabScheduled
             case .providers: return l10n.settingsTabProviders
             case .alerts: return l10n.settingsTabAlerts
+            case .updates: return l10n.settingsTabUpdates
             }
         }
     }
@@ -97,6 +83,7 @@ struct ProviderSettingsView: View {
         case notch
         case menubar
         case gauge
+        case system
 
         var id: String { rawValue }
 
@@ -105,13 +92,15 @@ struct ProviderSettingsView: View {
             case .notch: return l10n.layoutTabNotch
             case .menubar: return l10n.layoutTabMenubar
             case .gauge: return l10n.layoutTabGauge
+            case .system: return l10n.settingsTabSystem
             }
         }
     }
 
-    /// Provider 細節的子頁籤：用量／資訊／帳號。
+    /// Provider 細節的子頁籤：用量／每日／資訊／帳號。
     private enum ProviderTab: String, CaseIterable, Identifiable {
         case usage
+        case daily
         case details
         case accounts
 
@@ -120,6 +109,7 @@ struct ProviderSettingsView: View {
         func title(l10n: L10n) -> String {
             switch self {
             case .usage: return l10n.providerTabUsage
+            case .daily: return l10n.providerTabDaily
             case .details: return l10n.providerTabDetails
             case .accounts: return l10n.providerTabAccounts
             }
@@ -129,6 +119,7 @@ struct ProviderSettingsView: View {
     private enum AlertsTab: String, CaseIterable, Identifiable {
         case sound
         case speech
+        case card
         case agentWiring
 
         var id: String { rawValue }
@@ -137,6 +128,7 @@ struct ProviderSettingsView: View {
             switch self {
             case .sound: return l10n.alertsTabSound
             case .speech: return l10n.alertsTabSpeech
+            case .card: return l10n.alertsTabCard
             case .agentWiring: return l10n.alertsTabAgentWiring
             }
         }
@@ -195,12 +187,6 @@ struct ProviderSettingsView: View {
         Group {
             switch selectedTab {
             case .layout: layoutTabContent
-            case .system:
-                page {
-                    updateSection
-                    Divider()
-                    SystemMetricsSettingsRow(l10n: l10n)
-                }
             case .scheduled:
                 // 排程分頁是 Settings 的一級頁面，也是資料總覽入口；Layout 的 widget 可見性開關只治理瀏海面板呈現，不隱藏此分頁，避免使用者失去唯一的排程檢視入口。
                 page {
@@ -239,6 +225,10 @@ struct ProviderSettingsView: View {
                                 l10n: l10n,
                                 onPreviewSpeech: onPreviewSpeech)
                         }
+                    case .card:
+                        page {
+                            AgentAlertCardSettingsView(l10n: l10n)
+                        }
                     case .agentWiring:
                         page {
                             HookWiringSettingsView(
@@ -248,6 +238,12 @@ struct ProviderSettingsView: View {
                                 onUnwire: onUnwireHook)
                         }
                     }
+                }
+            case .updates:
+                page {
+                    UpdateSettingsView(
+                        updateCheckStore: updateCheckStore,
+                        l10n: l10n)
                 }
             }
         }
@@ -260,55 +256,6 @@ struct ProviderSettingsView: View {
         VStack(spacing: 0) {
             content()
         }
-    }
-
-    /// 常駐「軟體更新」小節：有新版橫幅／已是最新／檢查中，永遠附「立即檢查」。
-    private var updateSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(l10n.updateSectionTitle)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.88))
-
-            if updateCheckStore.isChecking {
-                ProgressView()
-                    .controlSize(.mini)
-            } else if let availableUpdate = updateCheckStore.availableUpdate {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .foregroundStyle(Color.accentColor)
-                    Text(l10n.updateAvailable(availableUpdate.version))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                    if let url = URL(string: availableUpdate.url) {
-                        Link(l10n.updateDownload, destination: url)
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                }
-            } else {
-                Text(l10n.updateUpToDate(updateCheckStore.currentVersion))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if let relative = relativeLastChecked {
-                Text(l10n.updateLastChecked(relative))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-
-            Button(l10n.updateCheckNow) {
-                Task {
-                    await updateCheckStore.checkIfDue(force: true)
-                }
-            }
-            .font(.system(size: 11, weight: .medium))
-            .disabled(updateCheckStore.isChecking)
-        }
-        .padding(.horizontal, SettingsMetrics.inset)
-        .padding(.vertical, 12)
     }
 
     @ViewBuilder
@@ -342,6 +289,8 @@ struct ProviderSettingsView: View {
                 }
             case .gauge:
                 page { GaugeSettingsRow(l10n: l10n, onResetPosition: onResetGaugePosition) }
+            case .system:
+                page { SystemMetricsSettingsRow(l10n: l10n) }
             }
         }
     }
@@ -501,6 +450,8 @@ struct ProviderSettingsView: View {
             switch selectedProviderTab {
             case .usage:
                 ProviderUsageDetail(usage: usage, displayMode: store.usageDisplayMode)
+            case .daily:
+                ProviderDailyUsageDetail(store: store, provider: selectedProvider)
             case .details:
                 VStack(alignment: .leading, spacing: 20) {
                     ProviderIconPickerRow(provider: selectedProvider)

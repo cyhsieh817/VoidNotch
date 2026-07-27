@@ -77,24 +77,9 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
             do {
                 let usage = try await usageProvider.fetchUsage(for: provider, selectedAccount: tokenAccount)
                 if let skipReason = Self.skipReason(from: usage.errorMessage) {
-                    do {
-                        try metadataStore.setMetadata(
-                            ProviderTokenAccountMetadata(isDisabled: true, disabledReason: skipReason),
-                            for: tokenAccount.id,
-                            provider: codexProvider)
-                    } catch {
-                        Self.log.error("Account disable persistence failed provider=\(codexProvider.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .private)")
-                    }
-                    var disabledAccount = account
-                    disabledAccount.isDisabled = true
-                    disabledAccount.disabledReason = skipReason
-                    accountUsages.append(
-                        ProviderAccountUsage(
-                            account: disabledAccount,
-                            usage: ProviderUsage(
-                                provider: provider,
-                                status: .unavailable,
-                                errorMessage: skipReason)))
+                    accountUsages.append(disableAccountForSkipReason(
+                        account: account, tokenAccount: tokenAccount, provider: provider,
+                        codexProvider: codexProvider, skipReason: skipReason))
                     continue
                 }
                 accountUsages.append(
@@ -103,24 +88,9 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
                         usage: usage))
             } catch {
                 if let skipReason = Self.skipReason(from: error.localizedDescription) {
-                    do {
-                        try metadataStore.setMetadata(
-                            ProviderTokenAccountMetadata(isDisabled: true, disabledReason: skipReason),
-                            for: tokenAccount.id,
-                            provider: codexProvider)
-                    } catch {
-                        Self.log.error("Account disable persistence failed provider=\(codexProvider.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .private)")
-                    }
-                    var disabledAccount = account
-                    disabledAccount.isDisabled = true
-                    disabledAccount.disabledReason = skipReason
-                    accountUsages.append(
-                        ProviderAccountUsage(
-                            account: disabledAccount,
-                            usage: ProviderUsage(
-                                provider: provider,
-                                status: .unavailable,
-                                errorMessage: skipReason)))
+                    accountUsages.append(disableAccountForSkipReason(
+                        account: account, tokenAccount: tokenAccount, provider: provider,
+                        codexProvider: codexProvider, skipReason: skipReason))
                     continue
                 }
                 accountUsages.append(
@@ -370,6 +340,37 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
         }
     }
 
+    /// Upserts credentials produced by the in-app OAuth login without changing
+    /// the semantics of the existing import paths. A Google authorization-code
+    /// response may omit refresh_token when the account is already known; in
+    /// that case only the matching account's existing refresh token is reused.
+    public func upsertAntigravityOAuthAccount(
+        _ credentials: AntigravityOAuthCredentials,
+        labelOverride: String? = nil) throws -> ProviderAccount
+    {
+        var credentialsToSave = credentials
+        if Self.normalized(credentials.refreshToken) == nil {
+            guard let email = Self.normalized(credentials.email),
+                  let data = try store.loadAccounts()[.antigravity],
+                  let existingAccount = data.accounts.first(where: { account in
+                      let accountEmail = Self.normalized(account.externalIdentifier)
+                          ?? AntigravityOAuthCredentialsStore
+                              .credentials(fromTokenAccountValue: account.token)
+                              .flatMap { Self.normalized($0.resolvedAccountEmail) }
+                      return accountEmail?.caseInsensitiveCompare(email) == .orderedSame
+                  }),
+                  let existingCredentials = AntigravityOAuthCredentialsStore
+                      .credentials(fromTokenAccountValue: existingAccount.token),
+                  let existingRefreshToken = Self.normalized(existingCredentials.refreshToken)
+            else {
+                throw AntigravityOAuthAccountUpsertError.missingRefreshToken
+            }
+            credentialsToSave.refreshToken = existingRefreshToken
+        }
+
+        return try upsertAntigravityAccount(credentialsToSave, labelOverride: labelOverride)
+    }
+
     public func exportAccounts(_ accountIDs: [UUID], for provider: TokenProviderKind) async throws -> ProviderAccountExport {
         guard provider == .antigravity else {
             throw TokenAccountManagementError.unsupportedProvider(provider)
@@ -419,6 +420,7 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
         let token = try AntigravityOAuthCredentialsStore.tokenAccountValue(for: credentials)
         let email = Self.normalized(credentials.resolvedAccountEmail)
         var accountsByProvider = try store.loadAccounts()
+        let originalAccountsByProvider = accountsByProvider
         let data = accountsByProvider[.antigravity] ?? ProviderTokenAccountData(version: 1, accounts: [], activeIndex: 0)
         let label = labelOverride ?? email ?? "Google Account \(data.accounts.count + 1)"
         var accounts = data.accounts
@@ -428,19 +430,11 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
                Self.normalized($0.externalIdentifier)?.caseInsensitiveCompare(email) == .orderedSame
            })
         {
-            accounts[index] = Self.copy(
-                accounts[index],
-                label: label,
-                token: token,
-                externalIdentifier: email,
-                lastUsed: Date().timeIntervalSince1970)
-            accountsByProvider[.antigravity] = ProviderTokenAccountData(
-                version: data.version,
-                accounts: accounts,
-                activeIndex: index)
-            try store.storeAccounts(accountsByProvider)
-            try antigravityCredentialsStore.save(credentials)
-            return Self.map(accounts[index], provider: .antigravity, isActive: true)
+            return try updateMatchedAntigravityAccount(
+                accounts: &accounts, accountsByProvider: &accountsByProvider,
+                index: index, dataVersion: data.version, token: token,
+                label: label, externalIdentifier: email,
+                originalAccountsByProvider: originalAccountsByProvider, credentials: credentials)
         }
 
         if let refreshToken = Self.normalized(credentials.refreshToken),
@@ -453,19 +447,12 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
                return existingRefreshToken == refreshToken
            })
         {
-            accounts[index] = Self.copy(
-                accounts[index],
+            return try updateMatchedAntigravityAccount(
+                accounts: &accounts, accountsByProvider: &accountsByProvider,
+                index: index, dataVersion: data.version, token: token,
                 label: labelOverride ?? email ?? accounts[index].label,
-                token: token,
                 externalIdentifier: email ?? accounts[index].externalIdentifier,
-                lastUsed: Date().timeIntervalSince1970)
-            accountsByProvider[.antigravity] = ProviderTokenAccountData(
-                version: data.version,
-                accounts: accounts,
-                activeIndex: index)
-            try store.storeAccounts(accountsByProvider)
-            try antigravityCredentialsStore.save(credentials)
-            return Self.map(accounts[index], provider: .antigravity, isActive: true)
+                originalAccountsByProvider: originalAccountsByProvider, credentials: credentials)
         }
 
         let account = ProviderTokenAccount(
@@ -480,9 +467,67 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
             version: data.version,
             accounts: accounts,
             activeIndex: accounts.count - 1)
-        try store.storeAccounts(accountsByProvider)
-        try antigravityCredentialsStore.save(credentials)
+        try persistAntigravityAccount(
+            accountsByProvider,
+            originalAccountsByProvider: originalAccountsByProvider,
+            credentials: credentials)
         return Self.map(account, provider: .antigravity, isActive: true)
+    }
+
+    private func disableAccountForSkipReason(
+        account: ProviderAccount,
+        tokenAccount: ProviderTokenAccount,
+        provider: TokenProviderKind,
+        codexProvider: UsageProvider,
+        skipReason: String) -> ProviderAccountUsage
+    {
+        do {
+            try metadataStore.setMetadata(
+                ProviderTokenAccountMetadata(isDisabled: true, disabledReason: skipReason),
+                for: tokenAccount.id, provider: codexProvider)
+        } catch {
+            Self.log.error("Account disable persistence failed provider=\(codexProvider.rawValue, privacy: .public) error=\(error.localizedDescription, privacy: .private)")
+        }
+        var disabledAccount = account
+        disabledAccount.isDisabled = true
+        disabledAccount.disabledReason = skipReason
+        return ProviderAccountUsage(
+            account: disabledAccount,
+            usage: ProviderUsage(provider: provider, status: .unavailable, errorMessage: skipReason))
+    }
+
+    private func updateMatchedAntigravityAccount(
+        accounts: inout [ProviderTokenAccount],
+        accountsByProvider: inout [UsageProvider: ProviderTokenAccountData],
+        index: Int, dataVersion: Int, token: String, label: String, externalIdentifier: String?,
+        originalAccountsByProvider: [UsageProvider: ProviderTokenAccountData],
+        credentials: AntigravityOAuthCredentials) throws -> ProviderAccount
+    {
+        accounts[index] = Self.copy(
+            accounts[index], label: label, token: token,
+            externalIdentifier: externalIdentifier, lastUsed: Date().timeIntervalSince1970)
+        accountsByProvider[.antigravity] = ProviderTokenAccountData(
+            version: dataVersion, accounts: accounts, activeIndex: index)
+        try persistAntigravityAccount(
+            accountsByProvider,
+            originalAccountsByProvider: originalAccountsByProvider,
+            credentials: credentials)
+        return Self.map(accounts[index], provider: .antigravity, isActive: true)
+    }
+
+    private func persistAntigravityAccount(
+        _ updatedAccountsByProvider: [UsageProvider: ProviderTokenAccountData],
+        originalAccountsByProvider: [UsageProvider: ProviderTokenAccountData],
+        credentials: AntigravityOAuthCredentials) throws
+    {
+        let accountsSnapshot = originalAccountsByProvider
+        try store.storeAccounts(updatedAccountsByProvider)
+        do {
+            try antigravityCredentialsStore.save(credentials)
+        } catch {
+            try? store.storeAccounts(accountsSnapshot)
+            throw error
+        }
     }
 
     private func syncSharedAntigravityCredentialsIfNeeded(
@@ -605,6 +650,14 @@ public struct CodexBarTokenAccountManager: TokenAccountManaging {
             return lhsEmail.caseInsensitiveCompare(rhsEmail) == .orderedSame
         }
         return false
+    }
+}
+
+private enum AntigravityOAuthAccountUpsertError: LocalizedError {
+    case missingRefreshToken
+
+    var errorDescription: String? {
+        "Google 未回傳 refresh token，請重試（prompt=consent）"
     }
 }
 #else

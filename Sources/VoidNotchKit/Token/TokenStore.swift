@@ -19,8 +19,14 @@ public final class TokenStore {
 
     private let usageProvider: any TokenUsageProviding
     private let accountManager: (any TokenAccountManaging)?
+    private let retryPolicy: UsageRetryPolicy
+    private let resilienceCache: UsageResilienceCache?
+    private let dailyStore: TokenDailyStore?
+    private let now: @Sendable () -> Date
     private let pollingDriver = PollingDriver()
     private var refreshReplayRequested = false
+    private var refreshReplayForced = false
+    private var retryStates: [TokenProviderKind: UsageRetryState] = [:]
     private let defaults: UserDefaults
     private let defaultsKey = "TokenStore.selectedProviderKinds"
     private let displayModeDefaultsKey = "TokenStore.usageDisplayMode"
@@ -31,38 +37,61 @@ public final class TokenStore {
         usageDisplayMode: TokenUsageDisplayMode? = nil,
         usageProvider: any TokenUsageProviding = UnavailableTokenUsageProvider(),
         accountManager: (any TokenAccountManaging)? = nil,
-        defaults: UserDefaults = .standard)
+        defaults: UserDefaults = .standard,
+        retryPolicy: UsageRetryPolicy = .init(),
+        resilienceCache: UsageResilienceCache? = nil,
+        dailyStore: TokenDailyStore? = nil,
+        now: @escaping @Sendable () -> Date = { Date() })
     {
         let initialProviderKinds = providerKinds ?? Self.loadProviderKinds(from: defaults)
         self.defaults = defaults
         self.usageProvider = usageProvider
         self.accountManager = accountManager
+        self.retryPolicy = retryPolicy
+        self.resilienceCache = resilienceCache
+        self.dailyStore = dailyStore
+        self.now = now
         self.selectedProviderKinds = initialProviderKinds
         self.providers = initialProviderKinds.map(ProviderUsage.placeholder)
         self.usageDisplayMode = usageDisplayMode ?? Self.loadUsageDisplayMode(from: defaults)
         self.compactDisplayProvider = Self.loadCompactDisplayProvider(from: defaults, enabledProviders: initialProviderKinds)
     }
 
-    public convenience init(providers: [ProviderUsage], defaults: UserDefaults = .standard) {
+    public convenience init(
+        providers: [ProviderUsage],
+        defaults: UserDefaults = .standard,
+        retryPolicy: UsageRetryPolicy = .init(),
+        resilienceCache: UsageResilienceCache? = nil,
+        dailyStore: TokenDailyStore? = nil,
+        now: @escaping @Sendable () -> Date = { Date() })
+    {
         self.init(
             providerKinds: providers.map(\.provider),
             usageProvider: StaticTokenUsageProvider(providers),
-            defaults: defaults)
+            defaults: defaults,
+            retryPolicy: retryPolicy,
+            resilienceCache: resilienceCache,
+            dailyStore: dailyStore,
+            now: now)
         self.providers = providers
     }
 
-    public var primaryUsedPercent: Int { providers.first?.usedPercent ?? 0 }
-    public var primaryCompactText: String { providers.first?.compactText(for: usageDisplayMode) ?? "-" }
     public var availableProviderCount: Int { providers.filter { $0.status == .available }.count }
     public var attentionProviderCount: Int {
-        providers.filter { $0.status.isAttentionState || $0.errorMessage != nil }.count
+        providers.filter {
+            $0.status.isAttentionState
+                || $0.errorMessage != nil
+                || !$0.freshness.isFresh
+                || $0.diagnosis != nil
+        }.count
     }
     public var enabledProviderCount: Int { selectedProviderKinds.count }
     public var providerHealthSummary: String {
         "\(availableProviderCount)/\(enabledProviderCount) available"
     }
-    public var compactHealthText: String {
-        attentionProviderCount > 0 ? "\(availableProviderCount) ok" : providerHealthSummary
+
+    public func retryState(for provider: TokenProviderKind) -> UsageRetryState {
+        retryStates[provider] ?? UsageRetryState()
     }
 
     public func isProviderEnabled(_ provider: TokenProviderKind) -> Bool {
@@ -87,13 +116,6 @@ public final class TokenStore {
             }
         }
 
-        saveProviderKinds()
-        providers = ordered(providers, matching: selectedProviderKinds)
-        Task { await refresh() }
-    }
-
-    public func resetProviderSelection() {
-        selectedProviderKinds = TokenProviderKind.defaultVisible
         saveProviderKinds()
         providers = ordered(providers, matching: selectedProviderKinds)
         Task { await refresh() }
@@ -139,10 +161,6 @@ public final class TokenStore {
         providerAccountUsages[provider] ?? []
     }
 
-    public func accountUsage(for account: ProviderAccount, provider: TokenProviderKind) -> ProviderAccountUsage? {
-        accountUsages(for: provider).first(where: { $0.account.id == account.id })
-    }
-
     public func recommendedAccountUsage(for provider: TokenProviderKind) -> ProviderAccountUsage? {
         let usages = accountUsages(for: provider)
         if let recommended = usages.first(where: \.isRecommended) {
@@ -157,6 +175,17 @@ public final class TokenStore {
 
     public func accountErrorMessage(for provider: TokenProviderKind) -> String? {
         accountErrorMessages[provider]
+    }
+
+    /// Daily cost/token series for heatmap views.
+    /// Returns an empty array when no daily store is configured.
+    public func dailySeries(
+        days: Int,
+        endingAt: Date,
+        provider: TokenProviderKind? = nil) -> [TokenDailyRecord]
+    {
+        guard let dailyStore else { return [] }
+        return dailyStore.series(provider: provider?.rawValue, days: days, endingAt: endingAt)
     }
 
     public func refreshAccounts(for provider: TokenProviderKind) async {
@@ -307,25 +336,113 @@ public final class TokenStore {
         }
     }
 
-    public func refresh() async {
+    public func refresh(forced: Bool = false) async {
         if isRefreshing {
             refreshReplayRequested = true
+            refreshReplayForced = refreshReplayForced || forced
             return
         }
 
+        // Consume the caller's forced flag once; later replay rounds only honor
+        // forced when a concurrent refresh(forced: true) arrived during isRefreshing.
+        var pendingForced = forced
         repeat {
+            let roundForced = pendingForced || refreshReplayForced
+            pendingForced = false
             refreshReplayRequested = false
+            refreshReplayForced = false
             isRefreshing = true
+
+            let refreshDate = now()
+            let providerKinds = selectedProviderKinds
+            let attemptedProviders = providerKinds.filter { provider in
+                retryPolicy.shouldAttempt(
+                    retryState(for: provider),
+                    now: refreshDate,
+                    forced: roundForced)
+            }
+
+            // Snapshot so attempted providers with no result can leave .refreshing.
+            let providersBeforeRefreshing = providers
             providers = providers.map { current in
+                guard attemptedProviders.contains(current.provider) else { return current }
                 var copy = current
                 copy.status = .refreshing
                 return copy
             }
 
-            let providerKinds = selectedProviderKinds
-            let snapshots = await usageProvider.fetchUsage(for: providerKinds)
-            providers = ordered(snapshots, matching: providerKinds)
-            lastRefreshedAt = Date()
+            let results: [ProviderUsageFetchResult]
+            if attemptedProviders.isEmpty {
+                results = []
+            } else {
+                results = await usageProvider.fetchUsage(for: attemptedProviders)
+            }
+
+            var resultByProvider: [TokenProviderKind: ProviderUsage] = [:]
+            for result in results {
+                var usage = result.usage
+                if let diagnosis = result.diagnosis {
+                    if let resilienceCache {
+                        usage = resilienceCache.recover(
+                            failed: usage,
+                            diagnosis: diagnosis,
+                            now: refreshDate)
+                    } else {
+                        usage.freshness = .fresh
+                        usage.diagnosis = diagnosis
+                    }
+                    retryStates[usage.provider] = retryPolicy.advanced(
+                        retryState(for: usage.provider),
+                        after: diagnosis,
+                        now: refreshDate)
+                } else {
+                    usage.freshness = .fresh
+                    usage.diagnosis = nil
+                    // Only real successes become last-known-good; diagnosis-nil
+                    // non-available snapshots must not pollute the cache.
+                    if usage.status == .available {
+                        resilienceCache?.recordSuccess(usage, at: refreshDate)
+                    }
+                    retryStates[usage.provider] = retryPolicy.recovered(from: retryState(for: usage.provider))
+                }
+                resultByProvider[usage.provider] = usage
+            }
+
+            let preRefreshByProvider = Dictionary(
+                uniqueKeysWithValues: providersBeforeRefreshing.map { ($0.provider, $0) })
+            providers = providers.map { current in
+                if let updated = resultByProvider[current.provider] {
+                    return updated
+                }
+                if attemptedProviders.contains(current.provider),
+                   let previous = preRefreshByProvider[current.provider]
+                {
+                    return previous
+                }
+                return current
+            }
+            providers = ordered(providers, matching: selectedProviderKinds)
+
+            if !attemptedProviders.isEmpty {
+                lastRefreshedAt = refreshDate
+            }
+
+            let dailyHistory = results.flatMap { $0.dailyHistory }
+            if let dailyStore, !dailyHistory.isEmpty {
+                do {
+                    _ = try dailyStore.ingest(dailyHistory, now: refreshDate)
+                } catch {
+                    NSLog("TokenDailyStore ingest failed: %@", error.localizedDescription)
+                }
+            }
+            if let resilienceCache {
+                do {
+                    try resilienceCache.persist()
+                } catch {
+                    NSLog("UsageResilienceCache persist failed: %@", error.localizedDescription)
+                }
+            }
+
             isRefreshing = false
         } while refreshReplayRequested
     }

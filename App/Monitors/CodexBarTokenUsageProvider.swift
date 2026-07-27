@@ -35,7 +35,7 @@ public struct CodexBarTokenUsageProvider: TokenUsageProviding {
             reason: "VoidNotch uses non-interactive provider snapshots and must not present CodexBar-branded keychain prompts.")
     }
 
-    public func fetchUsage(for providers: [TokenProviderKind]) async -> [ProviderUsage] {
+    public func fetchUsage(for providers: [TokenProviderKind]) async -> [ProviderUsageFetchResult] {
         // 各 provider 含 cost snapshot + live fetch(web timeout 可達 12s);序列 await 會把延遲疊加。
         // 改並行,延遲降到最慢單一 provider;回傳順序仍對齊輸入。
         let startedAt = Date()
@@ -46,25 +46,36 @@ public struct CodexBarTokenUsageProvider: TokenUsageProviding {
         return usage
     }
 
-    private func fetchProviderUsage(_ provider: TokenProviderKind) async -> ProviderUsage {
+    private func fetchProviderUsage(_ provider: TokenProviderKind) async -> ProviderUsageFetchResult {
         let startedAt = Date()
         var liveUsage: ProviderUsage?
         var liveError: Error?
+        var liveDiagnosis: UsageFetchDiagnosis?
 
         if provider.supportsLiveUsageSnapshot {
             let liveStartedAt = Date()
             do {
                 liveUsage = try await fetchLiveUsage(provider)
+                if let liveUsage, case .unavailable = liveUsage.status {
+                    liveDiagnosis = Self.noUsableDataDiagnosis(observedAt: startedAt)
+                }
                 Self.log.debug("Token live fetch succeeded provider=\(provider.id, privacy: .public) duration_ms=\(Self.elapsedMilliseconds(since: liveStartedAt), privacy: .public)")
             } catch {
                 liveError = error
+                liveDiagnosis = Self.diagnosis(for: error, observedAt: startedAt)
                 Self.log.debug("Token live fetch failed provider=\(provider.id, privacy: .public) duration_ms=\(Self.elapsedMilliseconds(since: liveStartedAt), privacy: .public) error=\(error.localizedDescription, privacy: .private)")
             }
         }
 
         if provider.supportsCostSnapshot {
             guard let codexBarProvider = provider.codexBarProvider else {
-                return Self.profiled(Self.unsupportedUsage(for: provider), provider: provider, startedAt: startedAt)
+                return Self.profiled(
+                    Self.unsupportedUsage(for: provider),
+                    provider: provider,
+                    startedAt: startedAt,
+                    diagnosis: UsageFetchDiagnosis(
+                        kind: .unsupported,
+                        observedAt: startedAt))
             }
 
             let costStartedAt = Date()
@@ -77,6 +88,9 @@ public struct CodexBarTokenUsageProvider: TokenUsageProviding {
                     refreshPricingInBackground: true)
                 Self.log.debug("Token cost fetch succeeded provider=\(provider.id, privacy: .public) duration_ms=\(Self.elapsedMilliseconds(since: costStartedAt), privacy: .public)")
                 let costUsage = Self.map(snapshot, provider: provider)
+                let costDiagnosis = Self.hasData(in: snapshot)
+                    ? nil
+                    : Self.noUsableDataDiagnosis(observedAt: startedAt)
                 if var liveUsage {
                     liveUsage.sessionTokens = costUsage.sessionTokens
                     liveUsage.last30DaysTokens = costUsage.last30DaysTokens
@@ -84,41 +98,78 @@ public struct CodexBarTokenUsageProvider: TokenUsageProviding {
                     liveUsage.last30DaysCostUSD = costUsage.last30DaysCostUSD
                     liveUsage.currencyCode = costUsage.currencyCode
                     liveUsage.errorMessage = liveUsage.errorMessage ?? costUsage.errorMessage
-                    return Self.profiled(liveUsage, provider: provider, startedAt: startedAt)
+                    // Live quota is authoritative: missing local cost records must not fail the fetch.
+                    return Self.profiled(
+                        liveUsage,
+                        provider: provider,
+                        startedAt: startedAt,
+                        dailyHistory: Self.dailyHistory(from: snapshot, provider: provider),
+                        diagnosis: liveDiagnosis)
                 }
-                return Self.profiled(costUsage, provider: provider, startedAt: startedAt)
+                return Self.profiled(
+                    costUsage,
+                    provider: provider,
+                    startedAt: startedAt,
+                    dailyHistory: Self.dailyHistory(from: snapshot, provider: provider),
+                    diagnosis: costDiagnosis ?? liveDiagnosis)
             } catch {
                 Self.log.debug("Token cost fetch failed provider=\(provider.id, privacy: .public) duration_ms=\(Self.elapsedMilliseconds(since: costStartedAt), privacy: .public) error=\(error.localizedDescription, privacy: .private)")
+                let costDiagnosis = Self.diagnosis(for: error, observedAt: startedAt)
                 if let liveUsage {
-                    return Self.profiled(liveUsage, provider: provider, startedAt: startedAt)
+                    return Self.profiled(
+                        liveUsage,
+                        provider: provider,
+                        startedAt: startedAt,
+                        diagnosis: costDiagnosis)
                 }
-                return Self.profiled(Self.map(error, provider: provider), provider: provider, startedAt: startedAt)
+                return Self.profiled(
+                    Self.map(error, provider: provider),
+                    provider: provider,
+                    startedAt: startedAt,
+                    diagnosis: costDiagnosis)
             }
         }
 
         if let liveUsage {
-            return Self.profiled(liveUsage, provider: provider, startedAt: startedAt)
+            return Self.profiled(
+                liveUsage,
+                provider: provider,
+                startedAt: startedAt,
+                diagnosis: liveDiagnosis)
         }
 
         if let liveError {
-            return Self.profiled(Self.map(liveError, provider: provider), provider: provider, startedAt: startedAt)
+            return Self.profiled(
+                Self.map(liveError, provider: provider),
+                provider: provider,
+                startedAt: startedAt,
+                diagnosis: liveDiagnosis)
         }
 
-        return Self.profiled(ProviderUsage(
+        return Self.profiled(
+            ProviderUsage(
+                provider: provider,
+                status: .unsupported,
+                errorMessage: "\(provider.displayName) usage adapter is pending"),
             provider: provider,
-            status: .unsupported,
-            errorMessage: "\(provider.displayName) usage adapter is pending"),
-            provider: provider,
-            startedAt: startedAt)
+            startedAt: startedAt,
+            diagnosis: UsageFetchDiagnosis(
+                kind: .unsupported,
+                observedAt: startedAt))
     }
 
     private static func profiled(
         _ usage: ProviderUsage,
         provider: TokenProviderKind,
-        startedAt: Date) -> ProviderUsage
+        startedAt: Date,
+        dailyHistory: [TokenDailyRecord] = [],
+        diagnosis: UsageFetchDiagnosis? = nil) -> ProviderUsageFetchResult
     {
         log.debug("Token provider fetch completed provider=\(provider.id, privacy: .public) status=\(usage.status.rawValue, privacy: .public) duration_ms=\(elapsedMilliseconds(since: startedAt), privacy: .public)")
-        return usage
+        return ProviderUsageFetchResult(
+            usage: usage,
+            dailyHistory: dailyHistory,
+            diagnosis: diagnosis)
     }
 
     private static func elapsedMilliseconds(since start: Date) -> Int {
@@ -215,7 +266,7 @@ public struct CodexBarTokenUsageProvider: TokenUsageProviding {
     }
 
     private static func map(_ snapshot: CostUsageTokenSnapshot, provider: TokenProviderKind) -> ProviderUsage {
-        let hasData = snapshot.sessionTokens != nil || snapshot.last30DaysTokens != nil || !snapshot.daily.isEmpty
+        let hasData = Self.hasData(in: snapshot)
         return ProviderUsage(
             provider: provider,
             status: hasData ? .available : .unavailable,
@@ -229,6 +280,29 @@ public struct CodexBarTokenUsageProvider: TokenUsageProviding {
             currencyCode: snapshot.currencyCode,
             updatedAt: snapshot.updatedAt,
             errorMessage: hasData ? nil : "No local token records yet")
+    }
+
+    private static func hasData(in snapshot: CostUsageTokenSnapshot) -> Bool {
+        snapshot.sessionTokens != nil || snapshot.last30DaysTokens != nil || !snapshot.daily.isEmpty
+    }
+
+    private static func dailyHistory(
+        from snapshot: CostUsageTokenSnapshot,
+        provider: TokenProviderKind) -> [TokenDailyRecord]
+    {
+        snapshot.daily.map {
+            TokenDailyRecord(
+                date: $0.date,
+                provider: provider.rawValue,
+                costUsd: $0.costUSD,
+                tokens: $0.totalTokens)
+        }
+    }
+
+    private static func noUsableDataDiagnosis(observedAt: Date) -> UsageFetchDiagnosis {
+        UsageFetchDiagnosis(
+            kind: .noUsableData,
+            observedAt: observedAt)
     }
 
     private static func mapLive(
@@ -377,6 +451,32 @@ public struct CodexBarTokenUsageProvider: TokenUsageProviding {
         return min(100, max(0, Int(value.rounded())))
     }
 
+    private static func diagnosis(for error: Error, observedAt: Date) -> UsageFetchDiagnosis {
+        let kind: UsageFetchFailureKind
+        if error is CancellationError {
+            kind = .unknown
+        } else if case CostUsageError.unsupportedProvider = error {
+            kind = .unsupported
+        } else if let urlError = error as? URLError {
+            switch urlError.code {
+            case .timedOut, .cannotConnectToHost, .networkConnectionLost,
+                 .notConnectedToInternet, .dnsLookupFailed, .cannotFindHost:
+                kind = .network
+            default:
+                kind = .network
+            }
+        } else if error is DecodingError {
+            kind = .schemaDrift
+        } else {
+            kind = UsageFailureTextClassifier.classify(error.localizedDescription)
+        }
+
+        return UsageFetchDiagnosis(
+            kind: kind,
+            rawMessage: error.localizedDescription,
+            observedAt: observedAt)
+    }
+
     private static func map(_ error: Error, provider: TokenProviderKind) -> ProviderUsage {
         let status: ProviderUsageStatus
         if case CostUsageError.unsupportedProvider = error {
@@ -508,12 +608,17 @@ private extension TokenProviderKind {
 public struct CodexBarTokenUsageProvider: TokenUsageProviding {
     public init() {}
 
-    public func fetchUsage(for providers: [TokenProviderKind]) async -> [ProviderUsage] {
+    public func fetchUsage(for providers: [TokenProviderKind]) async -> [ProviderUsageFetchResult] {
+        let startedAt = Date()
         providers.map {
-            ProviderUsage(
-                provider: $0,
-                status: .unavailable,
-                errorMessage: "Token usage adapter is not linked to the app target")
+            ProviderUsageFetchResult(
+                usage: ProviderUsage(
+                    provider: $0,
+                    status: .unavailable,
+                errorMessage: "Token usage adapter is not linked to the app target"),
+                diagnosis: UsageFetchDiagnosis(
+                    kind: .unsupported,
+                    observedAt: startedAt))
         }
     }
 }

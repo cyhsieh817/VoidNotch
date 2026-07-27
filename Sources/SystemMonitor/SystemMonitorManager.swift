@@ -37,6 +37,7 @@ public final class SystemMonitorManager: @unchecked Sendable {
     private var lastMediumAt: Date = .distantPast
     private var lastSlowAt: Date = .distantPast
     private var cachedDisk = DiskUsage()
+    private var cachedThermal = ThermalSnapshot()
     private var cachedBattery = BatteryStatus()
     private var cachedGPU = GPUUsage()
     private var cachedHost = HostInfo()
@@ -97,7 +98,6 @@ public final class SystemMonitorManager: @unchecked Sendable {
     private func buildSnapshot(now: Date, forceAll: Bool) -> SystemSnapshot {
         let cpu = cpuReader.read()
         let ram = ramReader.read()
-        let thermal = thermalReader.read()
         let diskIO = diskIOReader.read()
         let network = networkReader.read()
 
@@ -108,18 +108,19 @@ public final class SystemMonitorManager: @unchecked Sendable {
             cachedDisk = diskReader.read()
             cachedProcesses = processReader.read()
             cachedGPU = gpuReader.read()
+            // 溫度是最貴的 reader（實測每次 ~94ms 牆鐘、~5ms CPU，17 次 IOHID event IPC 往返），
+            // 且機體溫度不會在一秒內出現有意義的變化 → 掛 medium 檔，不隨 foreground 的 1s 快路徑走。
+            cachedThermal = thermalReader.read()
             lastMediumAt = now
         }
+        let thermal = cachedThermal
         if forceAll || now.timeIntervalSince(lastSlowAt) >= slowEvery {
             cachedBattery = batteryReader.read()
             cachedHost = hostInfoReader.read(force: forceAll)
             lastSlowAt = now
-        } else {
-            // Keep uptime fresh even on fast path.
-            var host = cachedHost
-            host.uptimeSeconds = hostInfoReader.read(force: false).uptimeSeconds
-            cachedHost = host
         }
+        // 原本在快路徑每 tick 改寫 cachedHost 的 uptimeSeconds，但 uptimeText 最細只到「分」，
+        // 每秒刷新看不出差別，卻讓觀察 host 的視圖每秒失效一次。改由 slow（15s）檔統一更新。
 
         let health = HealthScorer.score(
             cpuPercent: Double(cpu.percent),

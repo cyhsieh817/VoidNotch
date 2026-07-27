@@ -5,8 +5,6 @@ import CoreGraphics
 public enum NotchCompactLayout {
     public static let minWidth: CGFloat = 48
     public static let maxWidth: CGFloat = 240
-    public static let minSideWidth: CGFloat = minWidth
-    public static let maxSideWidth: CGFloat = maxWidth
     public static let defaultLeadingWidth: CGFloat = 150
     public static let defaultTrailingWidth: CGFloat = 110
 

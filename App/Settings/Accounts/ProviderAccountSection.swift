@@ -22,6 +22,8 @@ struct ProviderAccountSection: View {
     @State private var accountExport: ProviderAccountExport?
     @State private var manualImportLabel = ""
     @State private var manualImportValue = ""
+    @State private var isGoogleSignInInProgress = false
+    @State private var googleSignInErrorMessage: String?
 
     var body: some View {
         if provider == .antigravity {
@@ -54,6 +56,18 @@ struct ProviderAccountSection: View {
                     }
                     .help("Import the current Antigravity Google OAuth account")
 
+                    Button(action: beginGoogleSignIn) {
+                        if isGoogleSignInInProgress {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("正在等待 Google 授權…")
+                        } else {
+                            Label("Sign in with Google", systemImage: "person.crop.circle.badge.plus")
+                        }
+                    }
+                    .disabled(isGoogleSignInInProgress)
+                    .help("Sign in to Antigravity with Google OAuth")
+
                     Button {
                         Task {
                             accountExport = await onExport(accounts.map(\.id))
@@ -75,6 +89,13 @@ struct ProviderAccountSection: View {
 
                 if let errorMessage, !errorMessage.isEmpty {
                     Label(errorMessage, systemImage: "exclamationmark.triangle")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.orange)
+                        .lineLimit(3)
+                }
+
+                if let googleSignInErrorMessage, !googleSignInErrorMessage.isEmpty {
+                    Label(googleSignInErrorMessage, systemImage: "exclamationmark.triangle")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.orange)
                         .lineLimit(3)
@@ -160,5 +181,32 @@ struct ProviderAccountSection: View {
     private func copyToPasteboard(_ value: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(value, forType: .string)
+    }
+
+    private func beginGoogleSignIn() {
+        guard !isGoogleSignInInProgress else { return }
+        isGoogleSignInInProgress = true
+        googleSignInErrorMessage = nil
+
+        Task { @MainActor in
+            let result = await AntigravityOAuthLoginController().run()
+            guard !Task.isCancelled else {
+                isGoogleSignInInProgress = false
+                return
+            }
+
+            switch result.outcome {
+            case .success:
+                googleSignInErrorMessage = nil
+                onRefresh()
+            case .cancelled:
+                googleSignInErrorMessage = "Google 登入已取消。"
+            case .timedOut:
+                googleSignInErrorMessage = "Google 登入逾時，請重試。"
+            case let .failed(message):
+                googleSignInErrorMessage = message
+            }
+            isGoogleSignInInProgress = false
+        }
     }
 }

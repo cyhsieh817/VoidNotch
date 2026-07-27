@@ -31,9 +31,7 @@ final class NotchSideTests: XCTestCase {
     }
 
     func test_system_metric_defaults_and_compact_floor() {
-        let suite = "VoidNotch.Tests.SystemMetrics.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let defaults = makeTestDefaults("SystemMetrics")
 
         SystemMetricPreferences.registerDefaults(defaults)
         XCTAssertTrue(SystemMetricPreferences.isEnabled(.cpu, defaults: defaults))

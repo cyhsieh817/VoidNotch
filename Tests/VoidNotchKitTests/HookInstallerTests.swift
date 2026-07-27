@@ -279,4 +279,108 @@ final class HookInstallerTests: XCTestCase {
         // relay 沒複製到位，claude 的 settings.json 不該被動到
         XCTAssertFalse(FileManager.default.fileExists(atPath: paths.claudeSettings.path))
     }
+
+    // MARK: - relay 內容比對重刷（v0.9 P0）
+
+    /// 全 adapter 已 installed 但 installedRelay 內容過期 → 靜默重刷為 bundled 內容，不新增 InstallResult。
+    func test_installAllRefreshesStaleRelayWhenAllAdaptersInstalled() throws {
+        let dir = try tempDir()
+        let appSupportHooks = dir.appendingPathComponent("AppSupport/VoidNotch/hooks", isDirectory: true)
+        let bundledRelay = dir.appendingPathComponent("Bundle/hooks/peonping-voidnotch-relay.sh")
+        try FileManager.default.createDirectory(at: appSupportHooks, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: bundledRelay.deletingLastPathComponent(), withIntermediateDirectories: true)
+
+        let bundledData = Data("#!/bin/bash\necho bundled-v2\n".utf8)
+        let staleData = Data("#!/bin/bash\necho installed-v1\n".utf8)
+        try bundledData.write(to: bundledRelay)
+
+        let paths = HookPaths(
+            home: dir, appSupportHooks: appSupportHooks,
+            bundledRelay: bundledRelay, bundledPiExtension: dir.appendingPathComponent("voidnotch.ts"))
+        try staleData.write(to: paths.installedRelay)
+        XCTAssertNotEqual(try Data(contentsOf: paths.installedRelay), bundledData)
+
+        let adapters = [
+            StubAdapter(kind: .claude, status: .installed, mutations: [], planThrows: true),
+            StubAdapter(kind: .codex, status: .installed, mutations: [], planThrows: true),
+        ]
+        let inst = HookInstaller(adapters: adapters, paths: paths,
+                                 clock: { Date(timeIntervalSince1970: 1000) })
+        let results = inst.installAll(states: [.claude: .installed, .codex: .installed])
+
+        // 重刷是靜默基礎設施行為：.installed adapter 不進 results
+        XCTAssertTrue(results.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: paths.installedRelay), bundledData)
+    }
+
+    /// 內容已相等時不重寫（mtime 不變、不產生備份），避免無謂 IO。
+    func test_installAllSkipsRelayCopyWhenContentMatches() throws {
+        let dir = try tempDir()
+        let appSupportHooks = dir.appendingPathComponent("AppSupport/VoidNotch/hooks", isDirectory: true)
+        let bundledRelay = dir.appendingPathComponent("Bundle/hooks/peonping-voidnotch-relay.sh")
+        try FileManager.default.createDirectory(at: appSupportHooks, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: bundledRelay.deletingLastPathComponent(), withIntermediateDirectories: true)
+
+        let sameData = Data("#!/bin/bash\necho same-relay\n".utf8)
+        try sameData.write(to: bundledRelay)
+
+        let paths = HookPaths(
+            home: dir, appSupportHooks: appSupportHooks,
+            bundledRelay: bundledRelay, bundledPiExtension: dir.appendingPathComponent("voidnotch.ts"))
+        try sameData.write(to: paths.installedRelay)
+
+        // 固定 mtime，稍後比對是否被 touch
+        let past = Date(timeIntervalSince1970: 500)
+        try FileManager.default.setAttributes(
+            [.modificationDate: past], ofItemAtPath: paths.installedRelay.path)
+
+        let adapters = [
+            StubAdapter(kind: .claude, status: .installed, mutations: [], planThrows: true),
+            StubAdapter(kind: .codex, status: .installed, mutations: [], planThrows: true),
+        ]
+        let inst = HookInstaller(adapters: adapters, paths: paths,
+                                 clock: { Date(timeIntervalSince1970: 1000) })
+        let results = inst.installAll(states: [.claude: .installed, .codex: .installed])
+
+        XCTAssertTrue(results.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: paths.installedRelay), sameData)
+        let attrs = try FileManager.default.attributesOfItem(atPath: paths.installedRelay.path)
+        let mtime = attrs[.modificationDate] as? Date
+        XCTAssertEqual(mtime, past)
+        let backups = try FileManager.default.contentsOfDirectory(atPath: appSupportHooks.path)
+            .filter { $0.contains("voidnotch-bak") }
+        XCTAssertTrue(backups.isEmpty)
+    }
+
+    /// installedRelay 缺檔、adapter 全 installed 時仍應建立檔案（內容過期 OR 初裝）。
+    func test_installAllCreatesMissingRelayWhenNoAdapterNeedsInstall() throws {
+        let dir = try tempDir()
+        let appSupportHooks = dir.appendingPathComponent("AppSupport/VoidNotch/hooks", isDirectory: true)
+        let bundledRelay = dir.appendingPathComponent("Bundle/hooks/peonping-voidnotch-relay.sh")
+        try FileManager.default.createDirectory(
+            at: bundledRelay.deletingLastPathComponent(), withIntermediateDirectories: true)
+        // 刻意不建 appSupportHooks / installedRelay
+
+        let bundledData = Data("#!/bin/bash\necho create-missing\n".utf8)
+        try bundledData.write(to: bundledRelay)
+
+        let paths = HookPaths(
+            home: dir, appSupportHooks: appSupportHooks,
+            bundledRelay: bundledRelay, bundledPiExtension: dir.appendingPathComponent("voidnotch.ts"))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: paths.installedRelay.path))
+
+        let adapters = [
+            StubAdapter(kind: .claude, status: .installed, mutations: [], planThrows: true),
+            StubAdapter(kind: .codex, status: .installed, mutations: [], planThrows: true),
+        ]
+        let inst = HookInstaller(adapters: adapters, paths: paths,
+                                 clock: { Date(timeIntervalSince1970: 1000) })
+        let results = inst.installAll(states: [.claude: .installed, .codex: .installed])
+
+        XCTAssertTrue(results.isEmpty)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: paths.installedRelay.path))
+        XCTAssertEqual(try Data(contentsOf: paths.installedRelay), bundledData)
+    }
 }

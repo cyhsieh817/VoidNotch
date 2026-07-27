@@ -105,6 +105,21 @@ vn_assemble_bundle() {
         fi
     done
 
+    UPDATE_HELPER_SRC="$REPO_ROOT/resources/update/voidnotch-update-helper.sh"
+    UPDATE_HELPER_DEST="$APP/Contents/Resources/update/voidnotch-update-helper.sh"
+    if [ ! -f "$UPDATE_HELPER_SRC" ]; then
+        echo "錯誤：缺少更新 helper 資產：$UPDATE_HELPER_SRC" >&2
+        exit 1
+    fi
+    mkdir -p "$(dirname "$UPDATE_HELPER_DEST")"
+    cp "$UPDATE_HELPER_SRC" "$UPDATE_HELPER_DEST"
+    chmod 700 "$UPDATE_HELPER_DEST"
+    if [ ! -f "$UPDATE_HELPER_DEST" ]; then
+        echo "錯誤：更新 helper 未進入 bundle：Resources/update/voidnotch-update-helper.sh" >&2
+        exit 1
+    fi
+    echo "==> 打包更新 helper：Resources/update/voidnotch-update-helper.sh"
+
     cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

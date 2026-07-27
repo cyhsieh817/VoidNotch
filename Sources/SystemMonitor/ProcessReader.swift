@@ -8,6 +8,9 @@ import Darwin
 public final class ProcessReader: @unchecked Sendable {
     private let limit: Int
     private var prevCPU: [pid_t: (total: UInt64, at: Date)] = [:]
+    /// 程序名稱快取：processName 走 proc_name/proc_pidpath syscall，
+    /// 同一 pid 跨輪重複查詢成本高；只快取成功解析的名稱。
+    private var nameCache: [pid_t: String] = [:]
     private var timebase: mach_timebase_info_data_t = {
         var info = mach_timebase_info_data_t()
         mach_timebase_info(&info)
@@ -27,8 +30,9 @@ public final class ProcessReader: @unchecked Sendable {
 
         let now = Date()
         let logicalCPU = max(1, Foundation.ProcessInfo.processInfo.processorCount)
-        var samples: [ProcessSample] = []
-        samples.reserveCapacity(64)
+        // 輕量候選：迴圈內不取名，避免對數十個過門檻 pid 做 syscall 後卻只留 top-N。
+        var candidates: [(pid: pid_t, cpuPercent: Double, memoryBytes: UInt64)] = []
+        candidates.reserveCapacity(64)
         var seen: Set<pid_t> = []
 
         for i in 0..<Int(count) {
@@ -52,34 +56,52 @@ public final class ProcessReader: @unchecked Sendable {
                     let cpuSeconds = ns / 1_000_000_000
                     cpuPercent = min(Double(logicalCPU) * 100, (cpuSeconds / dt) * 100)
                 }
+            } else {
+                // 首次見到此 pid：可能是系統回收後重用的號碼，舊名稱必須作廢，
+                // 否則 top-N 會掛著前一個程序的名字。
+                nameCache[pid] = nil
             }
             prevCPU[pid] = (total, now)
 
             // Keep candidates that use measurable CPU or significant memory.
             if cpuPercent < 0.1 && mem < 80_000_000 { continue }
 
-            samples.append(ProcessSample(
-                pid: Int(pid),
-                name: Self.processName(pid: pid),
-                cpuPercent: cpuPercent,
-                memoryBytes: mem))
+            candidates.append((pid: pid, cpuPercent: cpuPercent, memoryBytes: mem))
         }
 
         if prevCPU.count > 3_000 {
             prevCPU = prevCPU.filter { seen.contains($0.key) }
+            // 與 prevCPU 一併清理，避免 nameCache 無上限成長。
+            nameCache = nameCache.filter { seen.contains($0.key) }
         }
 
-        return Array(samples.sorted { $0.cpuPercent > $1.cpuPercent }.prefix(limit))
+        // 只為 top-N 取名：先依 CPU 排序取 prefix(limit)，再解析名稱組 ProcessSample。
+        let top = candidates.sorted { $0.cpuPercent > $1.cpuPercent }.prefix(limit)
+        return top.map { c in
+            ProcessSample(
+                pid: Int(c.pid),
+                name: processName(pid: c.pid),
+                cpuPercent: c.cpuPercent,
+                memoryBytes: c.memoryBytes)
+        }
     }
 
-    private static func processName(pid: pid_t) -> String {
+    /// 解析程序名稱；先查 nameCache，未命中才 syscall。失敗回退 "pid-\(pid)" 但不寫入快取。
+    private func processName(pid: pid_t) -> String {
+        if let cached = nameCache[pid] {
+            return cached
+        }
         var name = [CChar](repeating: 0, count: 1_024)
         if proc_name(pid, &name, UInt32(name.count)) > 0 {
-            return String(cString: name)
+            let resolved = decodeCString(name)
+            nameCache[pid] = resolved
+            return resolved
         }
         var path = [CChar](repeating: 0, count: 4_096)
         if proc_pidpath(pid, &path, UInt32(path.count)) > 0 {
-            return (String(cString: path) as NSString).lastPathComponent
+            let resolved = (decodeCString(path) as NSString).lastPathComponent
+            nameCache[pid] = resolved
+            return resolved
         }
         return "pid-\(pid)"
     }

@@ -95,8 +95,9 @@ Secrets/
 *.dmg
 *.pkg
 dist/
-release/
-releases/
+# 錨定根目錄：不加斜線前綴會誤吞 scripts/release/（發布腳本因此漏出版控，2026-07-24 修正）
+/release/
+/releases/
 # Built .app bundles (keep sources; ignore packaged output under build/)
 *.app/
 
@@ -114,3 +115,10 @@ logs/
 # 內部測試散佈產物（不進 git）
 deploy/landing-preview/site/downloads/
 .wrangler/
+
+# Node 依賴與工具快取（server/voidnotch-license 等 Worker 專案）。
+# 2026-07-27：這些檔案原本未追蹤但也未被忽略，一次 `git add -A` 就把 713 個檔
+# 掃進索引，其中包含 wrangler 的帳號快取。忽略規則補在此，避免再次發生。
+node_modules/
+.wrangler/
+**/.cache/wrangler/

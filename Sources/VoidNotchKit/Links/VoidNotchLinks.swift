@@ -4,4 +4,5 @@ import Foundation
 public enum VoidNotchLinks {
     public static let site = URL(string: "https://voidnotch.labgrimoire.com")!
     public static let updateEndpoint = URL(string: "https://voidnotch.labgrimoire.com/downloads/version.json")!
+    public static let downloadHostSuffix = "labgrimoire.com"
 }

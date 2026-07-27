@@ -22,6 +22,8 @@ STAMP="$(date +%Y%m%d%H%M%S)"
 
 cd "$REPO_ROOT"
 
+"$REPO_ROOT/scripts/verify_pbxproj_registration.sh"
+
 # shellcheck source=lib/app_bundle.sh
 source "$REPO_ROOT/scripts/lib/app_bundle.sh"
 

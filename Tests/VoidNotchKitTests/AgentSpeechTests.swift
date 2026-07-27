@@ -207,12 +207,17 @@ final class AgentSpeechTests: XCTestCase {
         XCTAssertTrue(contextual.contains("不可以"))
         XCTAssertTrue(contextual.contains("不要"))
 
-        // 非二元極性：僅 labels
+        // 非二元極性：labels 置前、不帶極性別名（labels > 1 時會另附序號別名）
         let unrelated = ["Fast", "Safe"]
-        XCTAssertEqual(AgentSpeechOptionMatcher.contextualStrings(for: unrelated), unrelated)
+        let unrelatedContextual = AgentSpeechOptionMatcher.contextualStrings(for: unrelated)
+        XCTAssertEqual(Array(unrelatedContextual.prefix(2)), unrelated)
+        XCTAssertFalse(unrelatedContextual.contains("yes"))
+        XCTAssertFalse(unrelatedContextual.contains("不要"))
 
         let three = ["Allow", "Reject", "Skip"]
-        XCTAssertEqual(AgentSpeechOptionMatcher.contextualStrings(for: three), three)
+        let threeContextual = AgentSpeechOptionMatcher.contextualStrings(for: three)
+        XCTAssertEqual(Array(threeContextual.prefix(3)), three)
+        XCTAssertFalse(threeContextual.contains("yes"))
 
         // UI labels 本身不因 helper 改變
         XCTAssertEqual(allowReject, ["Allow", "Reject"])
@@ -227,6 +232,113 @@ final class AgentSpeechTests: XCTestCase {
         XCTAssertEqual(
             AgentSpeechOptionMatcher.match(transcript: "please Reject this", labels: ["Allow", "Reject"]),
             "Reject")
+    }
+
+    // MARK: - ordinal selection (序號選答)
+
+    func test_matcher_chinese_ordinal_hits() {
+        let labels = ["快速", "安全", "詳細"]
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "第一個", labels: labels), "快速")
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "第二", labels: labels), "安全")
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "三", labels: labels), "詳細")
+    }
+
+    func test_matcher_english_ordinal_hits() {
+        let labels = ["Fast", "Safe", "Detailed"]
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "first", labels: labels), "Fast")
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "option 2", labels: labels), "Safe")
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "number 3", labels: labels), "Detailed")
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "2", labels: labels), "Safe")
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "third", labels: labels), "Detailed")
+    }
+
+    func test_matcher_ordinal_out_of_range_returns_nil() {
+        let labels = ["Fast", "Safe"]
+        // 第三個超界
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "第三個", labels: labels))
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "third", labels: labels))
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "option 3", labels: labels))
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "9", labels: labels))
+    }
+
+    func test_matcher_ordinal_disabled_when_label_is_digit_or_ordinal_token() {
+        // label 含純數字 → 序號路徑停用
+        let withDigit = ["1", "Safe", "Fast"]
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "第二個", labels: withDigit))
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "second", labels: withDigit))
+        // 仍可 exact 命中數字 label
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "1", labels: withDigit), "1")
+
+        // label 本身是序號 token → 停用
+        let withOrdinalWord = ["first", "Safe", "Fast"]
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "第二個", labels: withOrdinalWord))
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "first", labels: withOrdinalWord), "first")
+
+        // 僅 1 個 label → 序號路徑停用
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "第一個", labels: ["Only"]))
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "1", labels: ["Only"]))
+    }
+
+    // MARK: - unique fuzzy match
+
+    func test_matcher_fuzzy_unique_hit() {
+        let labels = ["Apple", "Banana"]
+        // 單字元差（替換）
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "appla", labels: labels), "Apple")
+        // 刪一字
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "aple", labels: labels), "Apple")
+        // 增一字
+        XCTAssertEqual(AgentSpeechOptionMatcher.match(transcript: "applee", labels: labels), "Apple")
+    }
+
+    func test_matcher_fuzzy_multiple_hits_returns_nil() {
+        // 兩個 label 皆與 transcript 距離 ≤1
+        let labels = ["Alpha", "Alphd"]
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "alphb", labels: labels))
+    }
+
+    func test_matcher_binary_polarity_skips_fuzzy() {
+        // allow/deny 類不做模糊；即使距離 ≤1 也不命中
+        let labels = ["Allow", "Reject"]
+        // "allov" 對 Allow 距離 1，長度 ≥4，但二元極性 pair 整組跳過模糊
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "allov", labels: labels))
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "rejec", labels: labels))
+    }
+
+    func test_matcher_polarity_conflict_still_blocks_before_ordinal_and_fuzzy() {
+        // 既有極性衝突案例不回歸：正反並存仍 nil，不落入序號／模糊
+        let labels = ["Allow", "Reject"]
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "yes no", labels: labels))
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "可以 不要", labels: labels))
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "accept no", labels: ["Accept", "Reject"]))
+        XCTAssertNil(AgentSpeechOptionMatcher.match(transcript: "允許不要", labels: ["允許", "拒絕"]))
+    }
+
+    func test_contextualStrings_append_ordinal_aliases_when_multiple_labels() {
+        let labels = ["Fast", "Safe", "Detailed"]
+        let contextual = AgentSpeechOptionMatcher.contextualStrings(for: labels)
+        // 原始 labels 置前且不變
+        XCTAssertEqual(Array(contextual.prefix(3)), labels)
+        XCTAssertTrue(contextual.contains("第一個"))
+        XCTAssertTrue(contextual.contains("第二個"))
+        XCTAssertTrue(contextual.contains("第三個"))
+        XCTAssertTrue(contextual.contains("first"))
+        XCTAssertTrue(contextual.contains("second"))
+        XCTAssertTrue(contextual.contains("third"))
+        XCTAssertTrue(contextual.contains("option 1"))
+        XCTAssertTrue(contextual.contains("option 2"))
+        XCTAssertTrue(contextual.contains("option 3"))
+        // UI labels 本身不因 helper 改變
+        XCTAssertEqual(labels, ["Fast", "Safe", "Detailed"])
+
+        // 二元極性：極性別名仍在，序號別名一併附加
+        let allowReject = ["Allow", "Reject"]
+        let binaryContextual = AgentSpeechOptionMatcher.contextualStrings(for: allowReject)
+        XCTAssertEqual(Array(binaryContextual.prefix(2)), allowReject)
+        XCTAssertTrue(binaryContextual.contains("yes"))
+        XCTAssertTrue(binaryContextual.contains("第一個"))
+        XCTAssertTrue(binaryContextual.contains("first"))
+        XCTAssertTrue(binaryContextual.contains("option 1"))
     }
 
     func test_languageCode_pureChineseLabels_ignoreEnglishPreference() {
@@ -397,11 +509,7 @@ final class AgentSpeechTests: XCTestCase {
     // MARK: - preferences
 
     func test_preferences_defaults() throws {
-        let suite = "VoidNotch.AgentSpeechTests.defaults.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defaults.removePersistentDomain(forName: suite)
-        defer { defaults.removePersistentDomain(forName: suite) }
-
+        let defaults = makeTestDefaults("AgentSpeech.defaults")
         let prefs = AgentSpeechPreferences(userDefaults: defaults)
         XCTAssertFalse(prefs.enabled)
         XCTAssertNil(prefs.chineseVoiceIdentifier)
@@ -414,11 +522,7 @@ final class AgentSpeechTests: XCTestCase {
     }
 
     func test_rate_clamp() throws {
-        let suite = "VoidNotch.AgentSpeechTests.rate.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defaults.removePersistentDomain(forName: suite)
-        defer { defaults.removePersistentDomain(forName: suite) }
-
+        let defaults = makeTestDefaults("AgentSpeech.rate")
         let prefs = AgentSpeechPreferences(userDefaults: defaults)
         prefs.rate = 0.10
         XCTAssertEqual(prefs.rate, 0.35, accuracy: 0.0001)
@@ -435,11 +539,7 @@ final class AgentSpeechTests: XCTestCase {
     }
 
     func test_nonFinite_rate_usesDefault() throws {
-        let suite = "VoidNotch.AgentSpeechTests.nonFiniteRate.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defaults.removePersistentDomain(forName: suite)
-        defer { defaults.removePersistentDomain(forName: suite) }
-
+        let defaults = makeTestDefaults("AgentSpeech.nonFiniteRate")
         let prefs = AgentSpeechPreferences(userDefaults: defaults)
         for value in [Double.nan, Double.infinity, -Double.infinity] {
             prefs.rate = value
@@ -450,11 +550,7 @@ final class AgentSpeechTests: XCTestCase {
     }
 
     func test_voice_identifier_roundTrip() throws {
-        let suite = "VoidNotch.AgentSpeechTests.voice.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defaults.removePersistentDomain(forName: suite)
-        defer { defaults.removePersistentDomain(forName: suite) }
-
+        let defaults = makeTestDefaults("AgentSpeech.voice")
         let prefs = AgentSpeechPreferences(userDefaults: defaults)
         prefs.chineseVoiceIdentifier = "com.apple.voice.compact.zh-TW.Meijia"
         prefs.englishVoiceIdentifier = "com.apple.voice.compact.en-US.Samantha"
@@ -474,11 +570,7 @@ final class AgentSpeechTests: XCTestCase {
     }
 
     func test_enabled_roundTrip() throws {
-        let suite = "VoidNotch.AgentSpeechTests.enabled.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defaults.removePersistentDomain(forName: suite)
-        defer { defaults.removePersistentDomain(forName: suite) }
-
+        let defaults = makeTestDefaults("AgentSpeech.enabled")
         let prefs = AgentSpeechPreferences(userDefaults: defaults)
         XCTAssertFalse(prefs.enabled)
         prefs.enabled = true
@@ -489,11 +581,7 @@ final class AgentSpeechTests: XCTestCase {
     }
 
     func test_status_preferences_are_independently_selectable() throws {
-        let suite = "VoidNotch.AgentSpeechTests.statuses.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
-        defaults.removePersistentDomain(forName: suite)
-        defer { defaults.removePersistentDomain(forName: suite) }
-
+        let defaults = makeTestDefaults("AgentSpeech.statuses")
         let prefs = AgentSpeechPreferences(userDefaults: defaults)
         prefs.enabled = true
         XCTAssertTrue(prefs.speaks(.completed))

@@ -6,9 +6,9 @@ import Foundation
 
 /// 將語音辨識結果限制在題目既有的 option label 內。
 public enum AgentSpeechOptionMatcher {
-    /// 先 exact，再接受唯一的 contained match；零個或多個候選一律不自動選取。
-    /// 若為二元允許／拒絕標籤，再嘗試口語同義詞（回傳原始 label）。
-    /// 合法二元極性 pair 若同一句同時含正負證據（含原始 label 與反向口語別名），在 exact／contained／alias 前回 nil。
+    /// 比對順序：極性衝突檢查 → exact → contained → 序號 → 極性別名 → 模糊。
+    /// 零個或多個候選一律不自動選取；單字元 label 僅 exact。
+    /// 合法二元極性 pair 若同一句同時含正負證據（含原始 label 與反向口語別名），在後續路徑前回 nil。
     public static func match(transcript: String, labels: [String]) -> String? {
         guard isValid(labels: labels) else { return nil }
 
@@ -38,26 +38,54 @@ public enum AgentSpeechOptionMatcher {
         if contained.count == 1 { return contained[0] }
         if contained.count > 1 { return nil }
 
-        return matchPolarityAlias(normalizedTranscript: normalizedTranscript, labels: labels)
+        if let ordinal = matchOrdinal(
+            normalizedTranscript: normalizedTranscript,
+            labels: labels)
+        {
+            return ordinal
+        }
+
+        if let alias = matchPolarityAlias(
+            normalizedTranscript: normalizedTranscript,
+            labels: labels)
+        {
+            return alias
+        }
+
+        return matchFuzzy(
+            normalizedTranscript: normalizedTranscript,
+            labels: labels)
     }
 
-    /// 辨識請求用的 contextual strings：合法二元極性對才附加隱藏中英別名，否則僅 labels。
-    /// UI 顯示的 option label 不受影響。
+    /// 辨識請求用的 contextual strings：labels 原樣置前；合法二元極性對附加隱藏中英別名；
+    /// labels > 1 時附加序號別名（上限 9、去重）。UI 顯示的 option label 不受影響。
     public static func contextualStrings(for labels: [String]) -> [String] {
-        guard isValid(labels: labels),
-              binaryPolarityPair(labels: labels) != nil
-        else {
-            return labels
-        }
+        guard isValid(labels: labels) else { return labels }
 
         var seen = Set(labels.map(normalized))
         var result = labels
-        for alias in Self.spokenPositiveAliases + Self.spokenNegativeAliases {
-            let key = normalized(alias)
-            guard !key.isEmpty, !seen.contains(key) else { continue }
-            seen.insert(key)
-            result.append(alias)
+
+        if binaryPolarityPair(labels: labels) != nil {
+            for alias in Self.spokenPositiveAliases + Self.spokenNegativeAliases {
+                let key = normalized(alias)
+                guard !key.isEmpty, !seen.contains(key) else { continue }
+                seen.insert(key)
+                result.append(alias)
+            }
         }
+
+        if labels.count > 1 {
+            let count = min(labels.count, 9)
+            for index in 0..<count {
+                for alias in ordinalContextualAliases(for: index) {
+                    let key = normalized(alias)
+                    guard !key.isEmpty, !seen.contains(key) else { continue }
+                    seen.insert(key)
+                    result.append(alias)
+                }
+            }
+        }
+
         return result
     }
 
@@ -115,6 +143,131 @@ public enum AgentSpeechOptionMatcher {
             .split(whereSeparator: \.isWhitespace)
             .joined(separator: " ")
             .lowercased()
+    }
+
+    // MARK: - Ordinal selection (序號選答)
+
+    private static let chineseNumerals: [String] = [
+        "一", "二", "三", "四", "五", "六", "七", "八", "九",
+    ]
+
+    private static let englishOrdinalWords: [String] = [
+        "first", "second", "third", "fourth", "fifth",
+        "sixth", "seventh", "eighth", "ninth",
+    ]
+
+    /// 序號 token（正規化後完整相等才命中）：第N個／第N／中文數字／first…ninth／option N／number N／阿拉伯數字。
+    private static func ordinalTokens(for index: Int) -> [String] {
+        guard (0..<9).contains(index) else { return [] }
+        let n = index + 1
+        let zh = chineseNumerals[index]
+        let raw = [
+            "第\(zh)個",
+            "第\(zh)",
+            zh,
+            englishOrdinalWords[index],
+            "option \(n)",
+            "number \(n)",
+            "\(n)",
+        ]
+        return raw.map(normalized).filter { !$0.isEmpty }
+    }
+
+    /// contextualStrings 附加的序號別名子集：第N個、first…、option N（上限由呼叫端截斷）。
+    private static func ordinalContextualAliases(for index: Int) -> [String] {
+        guard (0..<9).contains(index) else { return [] }
+        let n = index + 1
+        return [
+            "第\(chineseNumerals[index])個",
+            englishOrdinalWords[index],
+            "option \(n)",
+        ]
+    }
+
+    private static var allOrdinalTokenKeys: Set<String> {
+        Set((0..<9).flatMap { ordinalTokens(for: $0) })
+    }
+
+    /// 任一 label 為純數字或本身是序號 token → 整條序號路徑停用；僅 1 個 label 亦停用。
+    private static func isOrdinalPathEnabled(labels: [String]) -> Bool {
+        guard labels.count > 1 else { return false }
+        let tokenKeys = allOrdinalTokenKeys
+        for label in labels {
+            let key = normalized(label)
+            if key.isEmpty { continue }
+            if isPureDigits(key) { return false }
+            if tokenKeys.contains(key) { return false }
+        }
+        return true
+    }
+
+    private static func isPureDigits(_ value: String) -> Bool {
+        !value.isEmpty && value.allSatisfy { $0.isNumber }
+    }
+
+    /// transcript 正規化後等於某序號 token 時回傳 labels[index]；超界／多命中／停用 → nil。
+    private static func matchOrdinal(
+        normalizedTranscript: String,
+        labels: [String]) -> String?
+    {
+        guard isOrdinalPathEnabled(labels: labels) else { return nil }
+
+        let limit = min(labels.count, 9)
+        var hits: [String] = []
+        for index in 0..<limit {
+            if ordinalTokens(for: index).contains(normalizedTranscript) {
+                hits.append(labels[index])
+            }
+        }
+        if hits.count == 1 { return hits[0] }
+        return nil
+    }
+
+    // MARK: - Fuzzy match (唯一模糊比對)
+
+    /// 正規化後 Levenshtein ≤ 1 且 label 長度 ≥ 4；唯一命中才回傳。
+    /// 二元極性 pair 整組不做模糊（避免 allow/deny 誤觸）。
+    private static func matchFuzzy(
+        normalizedTranscript: String,
+        labels: [String]) -> String?
+    {
+        if binaryPolarityPair(labels: labels) != nil { return nil }
+
+        let hits = labels.filter { label in
+            let candidate = normalized(label)
+            guard candidate.count >= 4 else { return false }
+            return levenshteinDistance(normalizedTranscript, candidate) <= 1
+        }
+        if hits.count == 1 { return hits[0] }
+        return nil
+    }
+
+    private static func levenshteinDistance(_ a: String, _ b: String) -> Int {
+        if a == b { return 0 }
+        let aChars = Array(a)
+        let bChars = Array(b)
+        let m = aChars.count
+        let n = bChars.count
+        if m == 0 { return n }
+        if n == 0 { return m }
+        // 長度差 > 1 時距離至少為差，可早退
+        if abs(m - n) > 1 { return abs(m - n) }
+
+        var previous = Array(0...n)
+        var current = Array(repeating: 0, count: n + 1)
+        for i in 1...m {
+            current[0] = i
+            let aChar = aChars[i - 1]
+            for j in 1...n {
+                let cost = aChar == bChars[j - 1] ? 0 : 1
+                current[j] = min(
+                    previous[j] + 1,
+                    current[j - 1] + 1,
+                    previous[j - 1] + cost)
+            }
+            swap(&previous, &current)
+        }
+        return previous[n]
     }
 
     // MARK: - Binary polarity aliases

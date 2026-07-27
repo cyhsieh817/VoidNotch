@@ -16,6 +16,7 @@ public final class AgentActivityStore {
 
     private let activityProvider: any AgentActivityProviding
     private let pollingDriver = PollingDriver()
+    private var fileWatcher: FileChangeWatcher?
     private var isPreparingRefresh = false
     private var seenEventIDs: Set<UUID>?
     private var seenInputRequestIDs = Set<UUID>()
@@ -92,11 +93,28 @@ public final class AgentActivityStore {
         seenInputRequestIDs = []
         pollingDriver.start(interval: interval) { [weak self] in
             await self?.refresh()
+            // 輪詢 tick 順便幫檔案監看補一次重掛嘗試(外部 relay 尚未建檔的空窗期兜底)。
+            self?.fileWatcher?.retryAttachIfNeeded()
         }
+        startFileWatchingIfAvailable()
     }
 
     public func stopPolling() {
         pollingDriver.stop()
+        fileWatcher?.stop()
+        fileWatcher = nil
+    }
+
+    /// 若 activityProvider 是讀事件檔的 PeonPingAgentActivityProvider,額外掛檔案系統監看做近即時刷新;
+    /// 輪詢(間隔不變)照舊跑,兩者觸發同一條 refresh 路徑,change detector 天然去重。
+    /// 就地 cast 具體型別而非另立協定,避免動到 PeonPingAgentActivityProvider.swift(eventLogURL 已是 public)。
+    private func startFileWatchingIfAvailable() {
+        guard let fileBackedProvider = activityProvider as? PeonPingAgentActivityProvider else { return }
+        let watcher = FileChangeWatcher(path: fileBackedProvider.eventLogURL.path)
+        fileWatcher = watcher
+        watcher.start { [weak self] in
+            Task { await self?.refresh() }
+        }
     }
 
     private func dispatchNewEvents(from snapshots: [AgentActivityEvent]) {

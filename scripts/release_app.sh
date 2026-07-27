@@ -39,11 +39,22 @@ BUNDLE_ID="dev.voidnotch.VoidNotch"
 ENTITLEMENTS="$REPO_ROOT/App/VoidNotch.entitlements"
 STAMP="$(date +%Y%m%d%H%M%S)"
 
-# 非密鑰，可由環境變數覆寫
-VOIDNOTCH_SIGN_IDENTITY="${VOIDNOTCH_SIGN_IDENTITY:-Developer ID Application: Chih-YU Hsieh (RARU9G3QX7)}"
+# 簽章識別：不設預設值。此腳本會匯出到公開 repo，硬編憑證通用名稱等同把
+# 維護者法定姓名與 Apple Team ID 寫進公開樹（技術上非機密——散佈版跑
+# `codesign -dv` 即可讀到——但不該以明文躺在可被 fork 的公開原始碼裡）。
+# 用法：export VOIDNOTCH_SIGN_IDENTITY="Developer ID Application: <Name> (<TeamID>)"
+# 查可用身分：security find-identity -v -p codesigning
+if [ -z "${VOIDNOTCH_SIGN_IDENTITY:-}" ]; then
+    echo "錯誤：未設定 VOIDNOTCH_SIGN_IDENTITY。" >&2
+    echo "  export VOIDNOTCH_SIGN_IDENTITY=\"Developer ID Application: <Name> (<TeamID>)\"" >&2
+    echo "  可用身分：security find-identity -v -p codesigning" >&2
+    exit 2
+fi
 VOIDNOTCH_NOTARY_PROFILE="${VOIDNOTCH_NOTARY_PROFILE:-VoidNotch-Notary}"
 
 cd "$REPO_ROOT"
+
+"$REPO_ROOT/scripts/verify_pbxproj_registration.sh"
 
 if [ "$ALLOW_DIRTY" = true ]; then
     echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -113,4 +124,26 @@ if ! echo "$SPCTL_OUT" | grep -q "accepted"; then
     exit 1
 fi
 
+# staple + spctl accepted 之後才產正式散佈 zip（勿把送審用 VoidNotch-notarize.zip 上傳 R2）
+DIST_ZIP="$BUILD_DIR/VoidNotch-${MARKETING_VERSION}-macOS-arm64.zip"
+if [ -f "$DIST_ZIP" ]; then
+    mkdir -p "$BUILD_DIR/.trash"
+    mv "$DIST_ZIP" "$BUILD_DIR/.trash/VoidNotch-${MARKETING_VERSION}-macOS-arm64.zip.$STAMP"
+fi
+echo "==> 打包正式散佈 zip：${DIST_ZIP}"
+ditto -c -k --keepParent "$APP" "$DIST_ZIP"
+
+DIST_SHA256="$(shasum -a 256 "$DIST_ZIP" | awk '{print $1}')"
+DIST_ZIP_BASENAME="$(basename "$DIST_ZIP")"
+echo "${DIST_SHA256}  ${DIST_ZIP_BASENAME}" | tee "$DIST_ZIP.sha256"
+echo "==> 正式散佈 zip sha256：${DIST_SHA256}"
+echo ""
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+echo "警語：R2 上傳一律使用正式散佈 zip："
+echo "  ${DIST_ZIP}"
+echo "VoidNotch-notarize.zip 僅為 notarytool 送審暫存，禁止上傳。"
+echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+echo ""
+
 echo "==> 完成：${APP} (v${MARKETING_VERSION} / VERSION=${VERSION} build ${BUILD_NUMBER})，已公證＋裝訂；來源 commit ${VN_SOURCE_COMMIT_SHORT}，VNSourceDirty=${VN_SOURCE_DIRTY}"
+echo "==> 正式散佈：${DIST_ZIP}（sha256 ${DIST_SHA256}）"

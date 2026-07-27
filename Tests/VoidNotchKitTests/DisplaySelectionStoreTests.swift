@@ -3,7 +3,7 @@ import XCTest
 
 final class DisplaySelectionStoreTests: XCTestCase {
     private func freshDefaults() -> UserDefaults {
-        let d = UserDefaults(suiteName: "DisplaySelectionStoreTests-\(UUID().uuidString)")!
+        let d = makeTestDefaults("DisplaySelectionStore")
         return d
     }
 
