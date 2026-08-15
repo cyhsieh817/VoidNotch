@@ -72,7 +72,7 @@ This repository is the free, MIT-licensed Community Edition — the full observa
 | Voice answering & answer-card system notifications | — | ✅ |
 
 **Pro is a one-time purchase — US$15 for up to 3 Macs, no subscription.**
-Get it at **[voidnotch.labgrimoire.com](https://voidnotch.labgrimoire.com)** —
+Get it at **[voidnotch.com](https://voidnotch.com)** —
 the site also hosts a **pre-built, notarized download** (free tier included) if you'd rather skip building from source.
 
 ## Develop & test
